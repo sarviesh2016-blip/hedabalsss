@@ -19,6 +19,20 @@ ALLOWED_MIME = {
 }
 MAX_SIZE_BYTES = 100 * 1024 * 1024  # 100MB
 
+EXT_TO_MIME = {
+    "mp4": "video/mp4",
+    "m4v": "video/x-m4v",
+    "mov": "video/quicktime",
+    "webm": "video/webm",
+}
+
+
+def _resolve_content_type(file_content_type: str | None, ext: str) -> str:
+    """Prefer a real video/* content type; fall back to extension-based mapping."""
+    if file_content_type and file_content_type.startswith("video/"):
+        return file_content_type
+    return EXT_TO_MIME.get(ext, "video/mp4")
+
 
 @router.post("/upload/video")
 async def upload_video(file: UploadFile = File(...), user=Depends(get_current_user)):
@@ -37,7 +51,7 @@ async def upload_video(file: UploadFile = File(...), user=Depends(get_current_us
 
     video_id = f"vid_{uuid.uuid4().hex[:14]}"
     storage_path = f"{APP_NAME}/videos/{user['user_id']}/{video_id}.{ext}"
-    content_type = file.content_type or "video/mp4"
+    content_type = _resolve_content_type(file.content_type, ext)
 
     try:
         result = put_object(storage_path, data, content_type)

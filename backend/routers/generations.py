@@ -1,4 +1,5 @@
 """Prompt generation endpoints."""
+import asyncio
 import uuid
 import logging
 from datetime import datetime, timezone
@@ -13,6 +14,9 @@ from ai_service import generate_prompt_from_video, fallback_mock_output
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["generations"])
+
+# Stay well within the K8s ingress 60s window so the fallback mock is always returned
+AI_TIMEOUT_SECONDS = 40
 
 
 @router.post("/generate-prompt")
@@ -52,24 +56,31 @@ async def generate_prompt(req: GenerateRequest, user=Depends(get_current_user)):
     await generations_col.insert_one(gen_doc.copy())
     await videos_col.update_one({"video_id": req.video_id}, {"$set": {"status": "processing"}})
 
-    # Run AI
+    # Run AI (with a hard timeout so we never exceed the ingress window)
     try:
         data, ct = get_object(video["storage_path"])
         ext = video["file_name"].rsplit(".", 1)[-1].lower() if "." in video["file_name"] else "mp4"
-        output = await generate_prompt_from_video(
-            video_bytes=data,
-            content_type=video.get("content_type") or ct or "video/mp4",
-            file_ext=ext,
-            selected_model=req.selected_model,
-            style_preset=req.style_preset,
-            session_id=gen_id,
+        output = await asyncio.wait_for(
+            generate_prompt_from_video(
+                video_bytes=data,
+                content_type=video.get("content_type") or ct or "video/mp4",
+                file_ext=ext,
+                selected_model=req.selected_model,
+                style_preset=req.style_preset,
+                session_id=gen_id,
+            ),
+            timeout=AI_TIMEOUT_SECONDS,
         )
         status = "completed"
         error = None
+    except asyncio.TimeoutError:
+        logger.warning("AI generation timed out; using fallback")
+        output = fallback_mock_output(video["file_name"], req.style_preset, req.selected_model)
+        status = "completed"
+        error = "ai_timeout_fallback"
     except Exception as e:
         logger.exception("AI generation failed; using fallback")
         output = fallback_mock_output(video["file_name"], req.style_preset, req.selected_model)
-        # Mark as completed but note the error so user still gets value
         status = "completed"
         error = f"ai_fallback: {e}"
 
