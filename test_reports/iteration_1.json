@@ -1,0 +1,58 @@
+{
+  "summary": "Comprehensive pytest run on 34 backend API tests for VideosToPrompt.com. 27/34 passed (79%). All non-AI endpoints work correctly — auth (Bearer token), video upload + validation, plans, mock payments + credit grant, API keys, admin gating, admin actions (credit adjust + integration keys + logs), contact form. The 7 failures all cascade from a single critical issue in POST /api/generate-prompt: the litellm/openai client retries Gemini calls internally for >60s, exceeding the K8s ingress timeout, so the fallback-to-mock code path never gets to return. Additionally the EMERGENT_LLM_KEY budget is exhausted, blocking real Gemini calls.",
+  "backend_issues": {
+    "critical": [
+      {
+        "endpoint": "POST /api/generate-prompt",
+        "issue": "Request consistently times out at ~60s with ingress 502. Root cause: ai_service.generate_prompt_from_video() awaits chat.send_message() with no asyncio.wait_for() bound. When Gemini returns 502 (or any retryable error), litellm/openai retries internally for >60s, so the FastAPI handler never reaches its except-block that builds the fallback mock output. The K8s ingress kills the connection at 60s and returns 502 'preview environment is not responding'. Backend log shows the route still running after the client has given up. Fix: wrap the AI call with asyncio.wait_for(..., timeout=45) and on TimeoutError use fallback_mock_output. Additionally consider setting num_retries=0 / max_retries=1 on the LlmChat client so failures surface fast. Note: credits are still decremented BEFORE the call, so failed (timed-out) generations cost users a credit with no result returned — refund-on-failure or decrement-only-on-success would be better.",
+        "priority": "CRITICAL"
+      },
+      {
+        "endpoint": "POST /api/generate-prompt (secondary)",
+        "issue": "EMERGENT_LLM_KEY budget exhausted: 'Budget has been exceeded! Current cost: 0.030834, Max budget: 0.001'. Even if the timeout bug above is fixed, every real Gemini call will fail with BadRequestError and the user will always receive fallback mock output. Main agent should top up / rotate the EMERGENT_LLM_KEY before claiming the AI path works end-to-end.",
+        "priority": "HIGH"
+      }
+    ],
+    "minor": [
+      {
+        "endpoint": "POST /api/generate-prompt",
+        "issue": "Credit decrement happens BEFORE the AI call. On failure (including the timeout case), the user is debited 1 credit but receives no usable response (ingress 502). Consider refunding the credit when status='failed' OR when the fallback mock is used due to AI error."
+      },
+      {
+        "endpoint": "GET /api/admin/integration-keys",
+        "issue": "razorpay_key_secret_masked uses Unicode bullets (•••). For 10-char secrets exactly it falls back to '•••' with no length hint — fine but could be more consistent."
+      }
+    ]
+  },
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": [
+    "/app/backend/tests/test_videostoprompt_api.py",
+    "/app/backend/tests/conftest.py",
+    "/app/test_reports/pytest/pytest_results.xml"
+  ],
+  "action_items": [
+    "Add asyncio.wait_for(generate_prompt_from_video(...), timeout=45) in routers/generations.py so the fallback mock is returned within the ingress 60s window.",
+    "Reduce litellm retry count (num_retries=0 or max_retries=1) on the LlmChat call so transient upstream errors surface fast instead of hanging.",
+    "Refund the credit (or only decrement on success) when AI generation fails / falls back, so failed generations don't silently cost users credits.",
+    "Rotate / top-up EMERGENT_LLM_KEY — current key has 'Budget exceeded'. Without this, Gemini will never succeed and every generation will be mock output."
+  ],
+  "critical_code_review_comments": [
+    "ai_service.py: no timeout on chat.send_message() — single point of failure that breaks the whole /generate-prompt flow under upstream latency.",
+    "routers/generations.py:32-37: credits are reserved before the AI call but never refunded on failure. Combined with the timeout bug, this drains user credits with no output.",
+    "auth_utils.py: emergent_get_session_data uses a sync 'requests' call inside an async path. Works but should be httpx/AsyncClient for non-blocking behaviour.",
+    "routers/videos.py:32: file is fully read into memory before size check (data = await file.read()), so a 1GB upload would OOM before being rejected. Consider streaming + early size cap via UploadFile.spool or Content-Length check.",
+    "razorpay_service.py:verify_signature in placeholder mode accepts ANY non-empty signature — fine for test mode (documented), but make sure prod can never accidentally enter this branch (add startup assert when ENV!=test).",
+    "All routers correctly project out _id via PROJ = {'_id': 0} — verified no _id leaks in tested responses."
+  ],
+  "updated_files": [
+    "/app/backend/tests/conftest.py (new)",
+    "/app/backend/tests/test_videostoprompt_api.py (new)"
+  ],
+  "success_rate": {"backend": "79% (27/34)", "frontend": "not tested (backend-only)"},
+  "test_credentials": "Seeded fresh per-run: user (credits=100, plan=pro) and admin (credits=10, plan=studio) inserted into MongoDB videostoprompt_db.users + user_sessions with Bearer tokens; see /app/memory/test_credentials.md. All seed docs prefixed with test.<role>.<ts>@example.com.",
+  "seed_data_creation": "conftest.py seeds 1 user + 1 admin per session via pymongo (sync) into videostoprompt_db. Test data is left in DB for follow-up debugging; can be cleaned by deleting users with email LIKE 'test.%@example.com'.",
+  "retest_needed": true,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "All endpoints except /api/generate-prompt are green. After main agent adds an asyncio.wait_for timeout in generations.py and (optionally) bumps the LLM budget, simply re-run: cd /app/backend && pytest tests/test_videostoprompt_api.py -v. Tests already accept mock fallback output as long as the schema is intact (summary/shortPrompt/detailedPrompt/sceneBreakdown[]/modelPrompts{veo,sora,kling,runway,midjourney,flux}). Razorpay placeholder mode is wired correctly — verify accepts any non-empty signature, credits incremented properly (verified 99 -> 149 after pack_50). Admin integration-keys PUT/GET persists correctly with masked secret. ffmpeg has been installed and /tmp/test.mp4 is a valid 3.7KB MP4 used for uploads.",
+  "rca of the issue": "POST /api/generate-prompt 502 RCA — Reproduction: 1) seed user+session in MongoDB, 2) POST /api/upload/video with a valid small mp4, 3) POST /api/generate-prompt {video_id, selected_model:'veo', style_preset:'cinematic'}. Observation: request hangs exactly 60.1s then returns 502 'preview environment is not responding'. Backend logs show litellm.BadRequestError 'Budget has been exceeded' raised internally, AND/OR openai 502 retried via 'Retrying request to /chat/completions in 0.38s'. The retry loop runs longer than 60s. The except block in routers/generations.py exists and would correctly fall back to fallback_mock_output(), but it never executes within the ingress window. Mitigation: wrap the await with asyncio.wait_for(..., timeout=45) and catch asyncio.TimeoutError -> fallback. Also pass max_retries=0 / num_retries=0 into LlmChat/litellm config so the first failure surfaces immediately."
+}
