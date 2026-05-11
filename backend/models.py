@@ -213,3 +213,17 @@ class ContactMessageRequest(BaseModel):
     email: EmailStr
     subject: str
     message: str
+
+
+class TicketCreateRequest(BaseModel):
+    subject: str
+    message: str
+
+
+class TicketReplyRequest(BaseModel):
+    body: str
+
+
+class TicketStatusUpdate(BaseModel):
+    status: Literal["open", "answered", "closed"]
+    priority: Optional[Literal["low", "normal", "high", "urgent"]] = None

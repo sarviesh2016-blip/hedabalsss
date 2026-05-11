@@ -19,6 +19,7 @@ api_keys_col = db.api_keys
 admin_logs_col = db.admin_logs
 settings_col = db.settings  # for integration keys overrides
 contact_col = db.contact_messages
+tickets_col = db.tickets
 
 
 PROJ = {"_id": 0}
