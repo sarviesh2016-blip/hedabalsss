@@ -159,7 +159,103 @@ def _run_direct_gemini(video_bytes: bytes, content_type: str, file_ext: str,
         except Exception: pass
 
 
-# ---------- Emergent universal key path ----------
+# ---------- Groq vision path (free tier with user's own key) ----------
+
+GROQ_VISION_MODEL = "meta-llama/llama-4-scout-17b-16e-instruct"  # multimodal, generous free limits
+GROQ_TEXT_FALLBACK = "llama-3.3-70b-versatile"
+
+
+def _extract_keyframes(video_path: str, count: int = 5) -> list[bytes]:
+    """Pull `count` evenly-spaced JPEG frames from the video. Returns list of bytes."""
+    import subprocess, json as _json
+    # 1) get duration
+    try:
+        out = subprocess.check_output(
+            ["ffprobe", "-v", "error", "-print_format", "json", "-show_format", video_path],
+            stderr=subprocess.DEVNULL, timeout=15,
+        )
+        dur = float(_json.loads(out).get("format", {}).get("duration", 0))
+    except Exception:
+        dur = 0.0
+    if dur <= 0:
+        dur = 6.0  # safe default
+    # 2) sample timestamps
+    step = dur / (count + 1)
+    timestamps = [round(step * (i + 1), 2) for i in range(count)]
+    frames = []
+    for ts in timestamps:
+        fd, p = tempfile.mkstemp(suffix=".jpg")
+        os.close(fd)
+        try:
+            subprocess.check_call(
+                ["ffmpeg", "-y", "-ss", str(ts), "-i", video_path,
+                 "-frames:v", "1", "-q:v", "5", "-vf", "scale=720:-2", p],
+                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=15,
+            )
+            with open(p, "rb") as f:
+                frames.append(f.read())
+        except Exception:
+            pass
+        finally:
+            try: os.unlink(p)
+            except Exception: pass
+    return frames
+
+
+def _run_groq_frames(video_bytes: bytes, content_type: str, file_ext: str,
+                     selected_model: str, style_preset: str, api_key: str) -> dict:
+    """Free-tier path: extract keyframes via ffmpeg, send to Groq Llama-4 Scout vision."""
+    import base64
+    from groq import Groq
+
+    suffix = f".{file_ext}" if file_ext else ".mp4"
+    with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
+        tmp.write(video_bytes)
+        tmp_path = tmp.name
+    try:
+        frames = _extract_keyframes(tmp_path, count=5)
+        if not frames:
+            raise RuntimeError("ffmpeg could not extract frames from this video")
+
+        # Build vision message: text + multiple image_url(base64) parts
+        image_parts = []
+        for jpg in frames:
+            b64 = base64.b64encode(jpg).decode("ascii")
+            image_parts.append({
+                "type": "image_url",
+                "image_url": {"url": f"data:image/jpeg;base64,{b64}"},
+            })
+
+        client = Groq(api_key=api_key)
+        completion = client.chat.completions.create(
+            model=GROQ_VISION_MODEL,
+            messages=[
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": (
+                            f"{SYSTEM_PROMPT}\n\n"
+                            f"Here are 5 keyframes (evenly sampled) from a video.\n"
+                            f"STYLE_PRESET: {style_preset}\n"
+                            f"PRIMARY_TARGET_MODEL: {selected_model}\n"
+                            f"Build the JSON object describing the full video. Reason across all 5 frames "
+                            f"to infer scene order, camera motion (compare framing between frames), and pacing. "
+                            f"Return ONLY the JSON object."
+                        )},
+                        *image_parts,
+                    ],
+                },
+            ],
+            response_format={"type": "json_object"},
+            temperature=0.6,
+            max_tokens=4096,
+        )
+        raw = completion.choices[0].message.content or ""
+        data = _coerce_json(raw)
+        return _normalise(data)
+    finally:
+        try: os.unlink(tmp_path)
+        except Exception: pass
 
 def _run_emergent(video_bytes: bytes, content_type: str, file_ext: str,
                   selected_model: str, style_preset: str, session_id: str, api_key: str) -> dict:
@@ -204,19 +300,38 @@ async def generate_prompt_from_video(
     style_preset: str,
     session_id: str,
     api_key: Optional[str] = None,
+    groq_key: Optional[str] = None,
 ) -> dict:
-    """Run Gemini on the video and return structured prompt JSON.
-
-    Routes to the official Google SDK if a real AIza... key is supplied,
-    otherwise to emergentintegrations. Whole pipeline runs in a worker thread."""
+    """Routes:
+       1) real Gemini key (AIza…) → google-genai SDK
+       2) Groq key (gsk_…)        → ffmpeg keyframes + Llama-4 Scout vision (FREE TIER)
+       3) anything else            → emergentintegrations
+       Whole pipeline runs in a worker thread."""
     key = api_key or EMERGENT_LLM_KEY or ""
-    use_direct = key.startswith("AIza")
-    if use_direct:
+    if key.startswith("AIza"):
         logger.info("AI: using DIRECT Gemini SDK (real key)")
+        try:
+            return await asyncio.to_thread(
+                _run_direct_gemini,
+                video_bytes, content_type, file_ext,
+                selected_model, style_preset, key,
+            )
+        except Exception as gem_err:
+            # If Gemini failed (quota etc) AND we have a Groq key, try Groq before giving up.
+            if groq_key and groq_key.startswith("gsk_"):
+                logger.warning(f"Gemini failed ({gem_err.__class__.__name__}); falling back to Groq frames pipeline")
+                return await asyncio.to_thread(
+                    _run_groq_frames,
+                    video_bytes, content_type, file_ext,
+                    selected_model, style_preset, groq_key,
+                )
+            raise
+    if groq_key and groq_key.startswith("gsk_"):
+        logger.info("AI: using Groq frames pipeline (free tier)")
         return await asyncio.to_thread(
-            _run_direct_gemini,
+            _run_groq_frames,
             video_bytes, content_type, file_ext,
-            selected_model, style_preset, key,
+            selected_model, style_preset, groq_key,
         )
     logger.info("AI: using Emergent universal-key path")
     return await asyncio.to_thread(

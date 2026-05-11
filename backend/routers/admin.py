@@ -89,6 +89,7 @@ async def get_integration_keys_route(admin=Depends(require_admin)):
         "google_client_id": keys.get("google_client_id", ""),
         "google_client_secret_masked": _mask(keys.get("google_client_secret")),
         "gemini_api_key_masked": _mask(keys.get("gemini_api_key")),
+        "groq_api_key_masked": _mask(keys.get("groq_api_key")),
     }
 
 

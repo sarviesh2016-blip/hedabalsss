@@ -38,7 +38,26 @@ with Google login, Razorpay payments, credit system, dashboard, admin controls, 
   - `/api-keys/*`, `/admin/*`, `/contact`
 - **Frontend**: 13 pages (dark theme initially)
 
-### Iteration 2 — Feb 11, 2026 (light theme + extended admin)
+### Iteration 4 — Feb 11, 2026 (Master Login + Free AI tier)
+- **Master Admin login (separate from Google OAuth)**:
+  - `/master-login` page with username/password form
+  - `POST /api/auth/admin-master/login` with bcrypt + idempotent seeding from env
+    (`MASTER_ADMIN_USERNAME`, `MASTER_ADMIN_PASSWORD`)
+  - Brute-force lockout: 5 fails / 15-min, per-username (works behind K8s ingress)
+- **Fixed setUser/navigate race**: all post-login redirects now use `window.location.replace()`
+  so AuthContext re-initialises with the new token before ProtectedRoute runs.
+- **Real Gemini SDK path**: when an `AIza…` key is supplied, we call the official `google-genai`
+  SDK (`gemini-2.5-pro`) instead of the Emergent wrapper.
+- **Groq free-tier fallback**: new pipeline
+  - `ffmpeg` extracts 5 keyframes from the uploaded video
+  - Frames + style preset sent to **Groq `meta-llama/llama-4-scout-17b-16e-instruct`** (free tier)
+  - Returns the same structured JSON schema as Gemini
+  - Smart routing: Gemini-real-key → Groq → Emergent-key → cinematic mock
+- **Admin → Integrations** now exposes a **Groq API Key** field (placeholder + admin-panel override).
+- **PromptResult** now shows an amber notice with the actual reason when a generation falls back
+  to the cinematic mock (quota / invalid key / timeout) and confirms the credit refund.
+- **Free-tier**: 2 credits/day refresh implemented in `auth_utils.refresh_free_credits_if_due`.
+- **Home button** in marketing nav + dashboard sidebar.
 - **Light theme**: full re-skin to a clean light SaaS aesthetic (off-white #fafafa, controlled
   purple-blue brand gradient accents, glass cards on white). All pages updated; text contrast verified.
 - **Credit refund on AI fallback**: `_process_generation` marks `used_fallback=True` and

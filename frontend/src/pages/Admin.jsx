@@ -51,7 +51,7 @@ export default function Admin() {
     try {
       await api.put("/admin/integration-keys", payload);
       toast.success("Integration keys updated");
-      setKeysForm({ razorpay_key_id: "", razorpay_key_secret: "", google_client_id: "", google_client_secret: "", gemini_api_key: "" });
+      setKeysForm({ razorpay_key_id: "", razorpay_key_secret: "", google_client_id: "", google_client_secret: "", gemini_api_key: "", groq_api_key: "" });
       const k = await api.get("/admin/integration-keys");
       setKeys(k.data);
     } catch { toast.error("Update failed"); }
@@ -172,6 +172,9 @@ export default function Admin() {
               </Field>
               <Field label="Gemini API Key (override)" current={keys.gemini_api_key_masked || "(using EMERGENT_LLM_KEY)"} testid="key-gemini">
                 <Input type="password" value={keysForm.gemini_api_key} onChange={(e) => setKeysForm({...keysForm, gemini_api_key: e.target.value})} placeholder="AIza... or sk-emergent-..." className="bg-white border-zinc-200" data-testid="input-gemini" />
+              </Field>
+              <Field label="Groq API Key (free-tier fallback)" current={keys.groq_api_key_masked || "(not set)"} testid="key-groq">
+                <Input type="password" value={keysForm.groq_api_key} onChange={(e) => setKeysForm({...keysForm, groq_api_key: e.target.value})} placeholder="gsk_..." className="bg-white border-zinc-200" data-testid="input-groq" />
               </Field>
             </div>
             <Button onClick={saveKeys} data-testid="save-keys-btn" className="btn-gradient rounded-full mt-6">Save integration keys</Button>

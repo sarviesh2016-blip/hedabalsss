@@ -11,7 +11,7 @@ from auth_utils import get_current_user
 from models import GenerateRequest, PromptOutput
 from storage_service import get_object
 from ai_service import generate_prompt_from_video, fallback_mock_output
-from runtime_config import get_gemini_key
+from runtime_config import get_gemini_key, get_groq_key
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["generations"])
@@ -23,6 +23,7 @@ async def _process_generation(gen_id: str, video: dict, selected_model: str, sty
     """Run the AI in the background; refund credit on failure."""
     try:
         gemini_key = await get_gemini_key()
+        groq_key = await get_groq_key()
         data, ct = get_object(video["storage_path"])
         ext = video["file_name"].rsplit(".", 1)[-1].lower() if "." in video["file_name"] else "mp4"
         output = await asyncio.wait_for(
@@ -34,6 +35,7 @@ async def _process_generation(gen_id: str, video: dict, selected_model: str, sty
                 style_preset=style_preset,
                 session_id=gen_id,
                 api_key=gemini_key,
+                groq_key=groq_key,
             ),
             timeout=AI_TIMEOUT_SECONDS,
         )

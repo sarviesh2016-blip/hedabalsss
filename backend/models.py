@@ -190,6 +190,7 @@ class IntegrationKeysUpdate(BaseModel):
     google_client_id: Optional[str] = None
     google_client_secret: Optional[str] = None
     gemini_api_key: Optional[str] = None
+    groq_api_key: Optional[str] = None
 
 
 class SiteConfigUpdate(BaseModel):
