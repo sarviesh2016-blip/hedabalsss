@@ -26,6 +26,18 @@ with Google login, Razorpay payments, credit system, dashboard, admin controls, 
 - Gemini-3-Pro video understanding with structured JSON schema output
 - Copy / TXT / JSON export of prompts; per-AI-model prompt tabs; scene timeline view
 
+## What's been implemented (Feb 12, 2026)
+
+### Iteration 5 — Feb 12, 2026 (Groq verified live)
+- **Groq key persisted in DB** (`settings.integration_keys.groq_api_key`).
+- **End-to-end Groq pipeline verified**: upload → ffmpeg keyframes (5) →
+  `meta-llama/llama-4-scout-17b-16e-instruct` → structured JSON.
+  Result: `status=completed`, `used_fallback=False`, real summary/scene breakdown
+  returned (no mock).
+- **Downloadable archives generated** for the user:
+  - `/downloads/<token>/videostoprompt_project.zip`
+  - `/downloads/<token>/videostoprompt_database.zip` (BSON dump + JSON exports)
+
 ## What's been implemented (Feb 11, 2026)
 
 ### Iteration 1 — MVP
