@@ -11,7 +11,25 @@ const MODELS = ["veo", "sora", "kling", "runway", "midjourney", "flux"];
 const STYLES = ["cinematic", "anime", "hyperrealistic", "documentary", "luxury", "cyberpunk"];
 
 const MAX_BYTES = 100 * 1024 * 1024;
+const MAX_DURATION_SECONDS = 10;
 const ACCEPT = ["video/mp4", "video/quicktime", "video/webm", "video/x-m4v"];
+
+// Read the video's duration metadata client-side without uploading.
+const probeDuration = (file) =>
+  new Promise((resolve) => {
+    try {
+      const url = URL.createObjectURL(file);
+      const v = document.createElement("video");
+      v.preload = "metadata";
+      v.onloadedmetadata = () => {
+        const d = v.duration;
+        URL.revokeObjectURL(url);
+        resolve(Number.isFinite(d) ? d : null);
+      };
+      v.onerror = () => { URL.revokeObjectURL(url); resolve(null); };
+      v.src = url;
+    } catch { resolve(null); }
+  });
 
 export default function UploadPage() {
   const navigate = useNavigate();
@@ -24,12 +42,17 @@ export default function UploadPage() {
   const [uploading, setUploading] = useState(false);
   const [generating, setGenerating] = useState(false);
 
-  const handleFile = (f) => {
+  const handleFile = async (f) => {
     if (!f) return;
     if (f.size > MAX_BYTES) { toast.error("File exceeds 100MB."); return; }
     const ext = f.name.split(".").pop().toLowerCase();
     if (!["mp4", "mov", "webm", "m4v"].includes(ext) && !ACCEPT.includes(f.type)) {
       toast.error("Only MP4, MOV, WEBM allowed."); return;
+    }
+    const dur = await probeDuration(f);
+    if (dur !== null && dur > MAX_DURATION_SECONDS + 0.5) {
+      toast.error(`Video is ${dur.toFixed(1)}s. Max allowed is ${MAX_DURATION_SECONDS}s — please trim and re-upload.`);
+      return;
     }
     setFile(f);
     setPreviewUrl(URL.createObjectURL(f));
@@ -113,7 +136,7 @@ export default function UploadPage() {
                 <UploadIcon size={26} className="text-violet-700" />
               </div>
               <p className="text-lg font-heading font-medium">Drop your video here</p>
-              <p className="text-secondary text-sm mt-2">MP4, MOV or WEBM · up to 100MB</p>
+              <p className="text-secondary text-sm mt-2">MP4, MOV or WEBM · up to 100MB · max 10 seconds</p>
               <Button type="button" data-testid="browse-btn" onClick={() => fileInputRef.current?.click()} className="btn-gradient rounded-full mt-6 px-6">
                 Browse files
               </Button>

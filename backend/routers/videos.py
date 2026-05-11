@@ -17,6 +17,7 @@ router = APIRouter(tags=["videos"])
 
 ALLOWED_EXT = {"mp4", "mov", "webm", "m4v", "quicktime"}
 MAX_SIZE_BYTES = 100 * 1024 * 1024  # 100MB
+MAX_DURATION_SECONDS = 10.0  # hard cap — keeps Groq vision cost low and aligns with free tier
 
 EXT_TO_MIME = {
     "mp4": "video/mp4",
@@ -60,6 +61,16 @@ async def upload_video(file: UploadFile = File(...), user=Depends(get_current_us
         with os.fdopen(fd, "wb") as f:
             f.write(data)
         duration = probe_duration(tmp_path)
+        # Enforce 10-second cap (small tolerance for container metadata jitter)
+        if duration is not None and duration > MAX_DURATION_SECONDS + 0.5:
+            try:
+                os.unlink(tmp_path)
+            except Exception:
+                pass
+            raise HTTPException(
+                status_code=400,
+                detail=f"Video duration is {duration:.1f}s. Maximum allowed is {int(MAX_DURATION_SECONDS)} seconds. Please trim and re-upload.",
+            )
         thumb_bytes = extract_thumbnail(tmp_path, at_seconds=min(1.0, (duration or 1.0) / 2))
         if thumb_bytes:
             thumb_path = f"{APP_NAME}/thumbs/{user['user_id']}/{video_id}.jpg"
@@ -69,6 +80,8 @@ async def upload_video(file: UploadFile = File(...), user=Depends(get_current_us
                 thumb_url = f"/api/videos/{video_id}/thumbnail"
             except Exception as e:
                 logger.warning(f"thumbnail upload failed: {e}")
+    except HTTPException:
+        raise
     except Exception as e:
         logger.warning(f"video probe failed: {e}")
     finally:
