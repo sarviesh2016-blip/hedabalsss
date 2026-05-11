@@ -14,6 +14,7 @@ load_dotenv(ROOT_DIR / ".env")
 from storage_service import init_storage  # noqa: E402
 from routers.auth import router as auth_router  # noqa: E402
 from routers.google_auth import router as google_auth_router  # noqa: E402
+from routers.admin_master_auth import router as admin_master_router, seed_master_admin  # noqa: E402
 from routers.videos import router as videos_router  # noqa: E402
 from routers.generations import router as gen_router  # noqa: E402
 from routers.prompts import router as prompts_router  # noqa: E402
@@ -36,6 +37,10 @@ async def lifespan(app: FastAPI):
         logger.info("Object storage initialized")
     except Exception as e:
         logger.error(f"Storage init failed (will retry lazily): {e}")
+    try:
+        await seed_master_admin()
+    except Exception as e:
+        logger.error(f"Master admin seed failed: {e}")
     yield
 
 
@@ -57,6 +62,7 @@ async def health():
 # Mount feature routers under /api
 api_router.include_router(auth_router)
 api_router.include_router(google_auth_router)
+api_router.include_router(admin_master_router)
 api_router.include_router(videos_router)
 api_router.include_router(gen_router)
 api_router.include_router(prompts_router)

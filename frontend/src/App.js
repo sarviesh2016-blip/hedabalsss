@@ -11,6 +11,7 @@ import ProtectedRoute from "@/components/ProtectedRoute";
 import Landing from "@/pages/Landing";
 import Pricing from "@/pages/Pricing";
 import Login from "@/pages/Login";
+import MasterLogin from "@/pages/MasterLogin";
 import Dashboard from "@/pages/Dashboard";
 import UploadPage from "@/pages/Upload";
 import PromptResult from "@/pages/PromptResult";
@@ -33,6 +34,8 @@ function AppRouter() {
       <Route path="/pricing" element={<Pricing />} />
       <Route path="/login" element={<Login />} />
       <Route path="/signup" element={<Login />} />
+      <Route path="/master-login" element={<MasterLogin />} />
+      <Route path="/admin-login" element={<MasterLogin />} />
       <Route path="/blog" element={<Blog />} />
       <Route path="/contact" element={<Contact />} />
       <Route path="/api-docs" element={<ApiDocs />} />

@@ -13,7 +13,7 @@ const PLANS = [
     cta: "Start free",
     highlight: false,
     features: [
-      "2 video generations",
+      "2 credits per day (refreshed daily)",
       "Short prompt length",
       "Basic TXT export",
       "Community support",

@@ -66,9 +66,9 @@ export default function Landing() {
                 </Button>
               </div>
               <div className="mt-10 flex items-center gap-6 text-xs text-muted">
-                <span className="flex items-center gap-2"><CheckCircle2 size={14} className="text-emerald-600" /> 2 free generations</span>
-                <span className="flex items-center gap-2"><CheckCircle2 size={14} className="text-emerald-600" /> No credit card</span>
-                <span className="flex items-center gap-2"><CheckCircle2 size={14} className="text-emerald-600" /> Export JSON</span>
+                <span className="flex items-center gap-2"><CheckCircle2 size={14} className="text-emerald-500" /> 2 credits per day · free</span>
+                <span className="flex items-center gap-2"><CheckCircle2 size={14} className="text-emerald-500" /> No credit card</span>
+                <span className="flex items-center gap-2"><CheckCircle2 size={14} className="text-emerald-500" /> Export JSON</span>
               </div>
             </motion.div>
 

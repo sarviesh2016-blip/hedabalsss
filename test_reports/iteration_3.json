@@ -1,0 +1,59 @@
+{
+  "summary": "Iteration 3 backend verification — added /app/backend/tests/test_admin_master_auth.py with 13 new tests covering master-admin login, brute-force lockout, restart-safe seeding, and Free-tier credit refresh. Full suite: 53 passed, 1 skipped, 1 xfailed (KNOWN BUG). All iteration_1/2 tests still pass. Verified: (a) POST /api/auth/admin-master/login with correct creds → 200, user.role='admin', user.email='master@admin.local', session_token starts with 'vtp_m_', HttpOnly cookie set; (b) returned token gates /api/auth/me (role=admin) and /api/admin/stats; (c) wrong password and wrong username both return 401 'Invalid credentials' with identical detail (timing uses bcrypt on both arms); (d) master_admin settings doc persisted with bcrypt $2b$ hash; master user row exists with role=admin, plan=studio; idempotent re-login works (different session tokens); (e) Free-plan user with last_credit_refresh=48h ago is refilled to 2 credits on next /auth/me call; refresh skipped within 24h; pro-plan user is never auto-refilled; (f) runtime_config.get_gemini_key() precedence verified by code review: admin override → GEMINI_API_KEY env → EMERGENT_LLM_KEY (correct).",
+  "backend_issues": {
+    "critical": [
+      {
+        "endpoint": "POST /api/auth/admin-master/login (brute-force lockout)",
+        "issue": "Lockout is BYPASSABLE in production. _attempts bucket key is (request.client.host, username) but behind Kubernetes ingress request.client.host = the ingress pod IP. With ≥2 ingress replicas, fail attempts get distributed across multiple bucket keys (confirmed in backend logs: alternating 10.79.131.92 / 10.79.131.93 from the SAME test client). 5+ consecutive bad logins from one real user are split into 2-3 per bucket and never trigger the 429. Fix: in routers/admin_master_auth.py:master_login, read X-Forwarded-For (leftmost) for ip OR — since this is the single master account — drop ip from the key entirely (`key = req.username`) so it is a global per-username counter. Test currently marked xfail with this RCA in the docstring.",
+        "priority": "HIGH"
+      }
+    ],
+    "minor": [
+      {
+        "endpoint": "GET /api/payments/plans",
+        "issue": "No 'free' plan is returned in /payments/plans — only paid tiers (starter, pro, studio, pack_50, …). The user-facing 'Free / 2 credits per day' messaging lives in frontend copy + the backend refresh_free_credits_if_due() logic. There is no API contract exposing the daily-credit number, so any future change to that number cannot be reflected automatically on the pricing page. Consider exposing free-tier metadata (daily_credits=2, plan='free') via /payments/plans or a new /pricing endpoint."
+      },
+      {
+        "endpoint": "POST /api/auth/admin-master/login (cookie SameSite)",
+        "issue": "Cookie is set with samesite='none', secure=True, httponly=True — fine for cross-site preview-domain auth, but in same-origin production deployments samesite='lax' is the safer default. Currently fine because the frontend is served from a different subdomain than backend in the preview env."
+      },
+      {
+        "endpoint": "routers/admin_master_auth.py:_attempts",
+        "issue": "In-memory brute-force tracker uses a plain dict (defaultdict) with no upper bound and no cleanup of stale entries except inside _is_locked_out. An attacker who keeps cycling unique usernames could grow the dict unbounded. Recommend periodic GC or a TTL-bounded cache (e.g., cachetools.TTLCache)."
+      }
+    ]
+  },
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": [
+    "/app/backend/tests/test_admin_master_auth.py",
+    "/app/backend/tests/test_videostoprompt_api.py",
+    "/app/backend/tests/conftest.py",
+    "/app/test_reports/pytest/pytest_results.xml"
+  ],
+  "action_items": [
+    "HIGH: Fix brute-force lockout key in routers/admin_master_auth.py to either (a) honour X-Forwarded-For (left-most) when computing ip, or (b) drop ip from the bucket key and use per-username global counter. Current behavior is BYPASSABLE behind k8s ingress (confirmed via backend logs and via reproducible xfail test).",
+    "Consider exposing free-tier daily_credits (2) via the /payments/plans response so the pricing page can read it from the API instead of hard-coding.",
+    "Add bounded TTL/GC to _attempts dict to prevent unbounded growth from username-cycling attackers.",
+    "Carried over from iteration_2 (still open): wrap emergentintegrations.send_message in asyncio.to_thread() to stop blocking the event loop during AI generation (causes transient 502 on concurrent polls)."
+  ],
+  "critical_code_review_comments": [
+    "routers/admin_master_auth.py:123 — `ip = request.client.host` is the proxy IP behind k8s ingress, not the real client. Combined with multi-replica ingress, this makes the 5-attempt lockout ineffective. See action items.",
+    "routers/admin_master_auth.py:seed_master_admin() is properly idempotent — re-hashes only when env password differs from stored bcrypt hash (good). _verify(password, stored_hash) call makes the comparison constant-time. ✅",
+    "routers/admin_master_auth.py:134 — bad-credential check correctly performs bcrypt.checkpw on BOTH username-mismatch and password-mismatch arms, preventing username-enumeration via timing. ✅",
+    "routers/admin_master_auth.py:_attempts is an unbounded dict in module scope. A persistent low-rate attacker cycling unique usernames could OOM the process over time. Add a bounded TTLCache or periodic GC.",
+    "runtime_config.get_gemini_key(): precedence is correct (admin override → GEMINI_API_KEY env → EMERGENT_LLM_KEY fallback). ✅",
+    "auth_utils.refresh_free_credits_if_due(): correctly tops up free-plan users to 2 credits once per 24h; non-free plans untouched. Verified end-to-end. ✅",
+    "Cookie is set with secure=True, httponly=True, samesite='none' — appropriate for cross-origin preview. For prod same-origin consider samesite='lax'.",
+    "Carried over: routers/generations.py still uses sync litellm under async wrapper → blocks event loop. (Iteration_2 unresolved.)"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_admin_master_auth.py (NEW — 13 tests: 5 login, 1 lockout xfail, 3 seeding/persistence, 3 free-credit refresh, 1 pricing skip)"
+  ],
+  "success_rate": {"backend": "53/55 effective (96%); 1 xfail = known bug; 1 skipped = N/A endpoint", "frontend": "not tested (backend-only per request)"},
+  "test_credentials": "Master admin: username='admin' password='VtpMaster@2026!Cinema' → returns session_token starting 'vtp_m_'. Existing seeded test users (test.user.*, test.admin.*) carry over from conftest.py.",
+  "seed_data_creation": "test_admin_master_auth.py seeds additional throwaway free/pro/lockout-target users directly via pymongo (prefix test.free.*, test.pro.*, user_test_*) — left in DB for post-hoc inspection. Master admin user and master_admin settings doc are NOT touched (re-seeded automatically by backend lifespan).",
+  "retest_needed": true,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Full suite stable at 53 passed + 1 xfail (lockout bypass bug) + 1 skipped (free plan not in /payments/plans). The xfail test_lockout_after_5_failures will FLIP TO PASS once main agent fixes the ip-resolution in routers/admin_master_auth.py — at that point, change @pytest.mark.xfail to a plain test. Reproduction of the bug is documented in the test's xfail reason and in the rca field below. Backend logs at /var/log/supervisor/backend.*.log show the two distinct ingress IPs (10.79.131.92 and 10.79.131.93) servicing alternating requests from the same test client — this is the smoking gun. Iteration_2 issues (event-loop blocking from sync litellm, no way to clear integration keys via API) are still open and unchanged.",
+  "rca of the issue": "Brute-force lockout bypass — RCA: _attempts dictionary in routers/admin_master_auth.py is keyed by f'{ip}:{username}' where ip = request.client.host. In the K8s preview environment (and any prod with a reverse proxy/ingress), request.client.host is the IP of the ingress pod that proxied the request — NOT the IP of the real end user. Backend logs prove that requests from a single test client are alternating between 10.79.131.92 and 10.79.131.93 (two ingress replicas), so 5 consecutive bad-password attempts from the same attacker are split into 2-3 entries per bucket, never reaching the 5-attempt threshold. Result: an attacker can perform unlimited password guesses against the master admin account. Reproduction: run pytest /app/backend/tests/test_admin_master_auth.py::TestMasterAdminLockout — fails 100% on the preview deployment. Fix options: (1) Use the canonical reverse-proxy header X-Forwarded-For: `ip = request.headers.get('x-forwarded-for','').split(',')[0].strip() or (request.client.host if request.client else '?')`. (2) Since this is a single master account, drop the ip from the bucket key and use only the username — gives a global per-account counter that cannot be bypassed by IP rotation. Recommend (2) for defense-in-depth, optionally combined with (1). After fix, the test should immediately pass without any other changes."
+}

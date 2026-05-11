@@ -22,6 +22,10 @@ async def get_gemini_key() -> str:
     override = keys.get("gemini_api_key")
     if override:
         return override
+    # Allow a real Gemini API key via env, falling back to EMERGENT_LLM_KEY
+    env_gemini = os.environ.get("GEMINI_API_KEY", "")
+    if env_gemini:
+        return env_gemini
     return os.environ.get("EMERGENT_LLM_KEY", "")
 
 
