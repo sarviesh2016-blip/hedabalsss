@@ -1,0 +1,121 @@
+{
+  "project_name": "VideosToPrompt.com",
+  "theme": "dark",
+  "archetype": "Archetype 5 (Jewel & Luxury) with controlled Archetype 7 (Electric & Neon) accents",
+  "emotional_tone": "Cinematic, Professional, Cutting-edge AI Lab, Magical yet highly technical",
+  "colors": {
+    "backgrounds": {
+      "app": "#050505",
+      "card": "rgba(255, 255, 255, 0.03)",
+      "card_hover": "rgba(255, 255, 255, 0.05)",
+      "glass": "rgba(10, 10, 12, 0.6)",
+      "sidebar": "#09090B"
+    },
+    "text": {
+      "primary": "#FFFFFF",
+      "secondary": "#A1A1AA",
+      "muted": "#71717A",
+      "accent": "#00E5FF"
+    },
+    "brand": {
+      "primary_gradient": "linear-gradient(135deg, #6366F1 0%, #A855F7 100%)",
+      "primary_solid": "#8B5CF6",
+      "cyan_glow": "#00E5FF",
+      "border_subtle": "rgba(255, 255, 255, 0.08)",
+      "border_active": "rgba(99, 102, 241, 0.5)"
+    },
+    "status": {
+      "success": "#10B981",
+      "warning": "#F59E0B",
+      "error": "#EF4444"
+    }
+  },
+  "typography": {
+    "fonts": {
+      "heading": "Outfit, sans-serif",
+      "body": "Manrope, sans-serif",
+      "mono": "JetBrains Mono, monospace"
+    },
+    "scales": {
+      "h1": "text-5xl sm:text-6xl tracking-tight font-semibold",
+      "h2": "text-3xl sm:text-4xl tracking-tight font-medium",
+      "h3": "text-xl sm:text-2xl tracking-tight font-medium",
+      "body": "text-base leading-relaxed",
+      "small": "text-sm text-secondary",
+      "mono_prompt": "text-sm font-mono leading-relaxed text-secondary"
+    }
+  },
+  "layout_and_spacing": {
+    "spacing_scale": "Generous spacing. Use p-8 to p-12 for major marketing sections. Use p-6 for dashboard cards.",
+    "marketing_grid": "Mode A: The Tetris Grid. Asymmetric bento grid with gap-8. Prevent perfect symmetry.",
+    "dashboard_grid": "Mode B: The Control Room Grid. gap-4 to gap-6. Every pixel utilized.",
+    "glassmorphism": "Use backdrop-blur-xl or 2xl on top nav and major marketing cards. 1px inner stroke border-white/10.",
+    "max_width": "max-w-7xl mx-auto for pages, 100% width for dashboard workspace."
+  },
+  "components_instructions": {
+    "buttons": {
+      "primary": "Gradient background (purple to blue) with hover scale (scale-105) and drop shadow glow (drop-shadow-[0_0_12px_rgba(99,102,241,0.5)]). Text color must be pure white.",
+      "secondary": "Glass style: bg-white/5 border border-white/10 hover:bg-white/10 text-white transition-all.",
+      "ghost": "Transparent bg, text-secondary hover:text-white hover:bg-white/5."
+    },
+    "cards": {
+      "marketing": "Glassmorphism, deep background, 1px white/10 border. Overlay subtle noise/grain texture.",
+      "dashboard": "Flat dark bg (#09090B), 1px border-white/5, hover:-translate-y-1 hover:border-white/15 transition-all."
+    },
+    "inputs": {
+      "style": "Dark background (bg-black/50), border-white/10, focus:border-purple-500 focus:ring-1 focus:ring-purple-500 text-white placeholder:text-gray-500."
+    },
+    "video_timeline": {
+      "description": "Custom visual component for the Prompt Result page. Must feel like a premium video editor.",
+      "style": "Horizontal or stacked list. Each scene card should have a timestamp (mono font), thumbnail (or abstract placeholder), and AI metadata tags (cyan/purple outlines). Active scene should have a cyan left-border highlight."
+    },
+    "tabs": {
+      "style": "Use Shadcn tabs but heavily customized. bg-white/5 p-1 rounded-lg. Active tab: bg-white/10 text-white shadow-sm. Inactive tab: text-secondary hover:text-white."
+    }
+  },
+  "motion_and_effects": {
+    "hover": "All interactive elements must have hover state transitions (duration-200 or 300).",
+    "glow": "Use drop-shadows strategically on the primary CTA and key data points (e.g. Credit Balance). DO NOT overuse.",
+    "entrance": "Use framer-motion for staggered fade-in up (y: 20, opacity: 0 -> y: 0, opacity: 1) on lists and grid items."
+  },
+  "media_assets": {
+    "logos": {
+      "brand": {
+        "url": "https://customer-assets.emergentagent.com/job_41053655-ee2c-4f38-b3cd-4e5bc76688c0/artifacts/hj6245j0_videostoprompt.png",
+        "description": "VideosToPrompt Logo (Purple-Blue Gradient play icon with wordmark)",
+        "placement": "Header, Footer, Login/Signup screens"
+      }
+    },
+    "images": {
+      "hero_demo": {
+        "url": "https://images.pexels.com/photos/28122495/pexels-photo-28122495.jpeg",
+        "description": "Cinematic Cyberpunk city shot for video demo placeholder",
+        "placement": "Marketing Hero video preview placeholder"
+      },
+      "feature_cinematic": {
+        "url": "https://images.pexels.com/photos/23384400/pexels-photo-23384400.jpeg",
+        "description": "Professional cameraman in moody red/warm lighting",
+        "placement": "Feature section 'Turn Any Video Into Powerful AI Prompts'"
+      },
+      "abstract_tech": {
+        "url": "https://images.unsplash.com/photo-1554934991-78d3b7b533c6",
+        "description": "Abstract dark technology node/LED lights",
+        "placement": "API Docs background, or prompt generation loading state background"
+      }
+    }
+  },
+  "testing_requirements": {
+    "data_testid": "ALL interactive elements (buttons, links, form inputs, tabs, video upload dropzone, export buttons, model tabs) MUST include a kebab-case data-testid attribute."
+  },
+  "instructions_to_main_agent": [
+    "Install and configure 'lucide-react' for all iconography.",
+    "Use Tailwind CSS for all layout and styling. Do not write custom CSS unless strictly for animations/masks that Tailwind cannot handle.",
+    "Implement the Layout for authenticated pages using a collapsible sidebar (Shadcn Sidebar pattern or custom flex layout).",
+    "For the Video Upload section, create a large, dashed-border dropzone (bg-white/5 border-dashed border-white/20 hover:border-purple-500 transition-colors).",
+    "For the Prompt Result page, create a striking two-column or stacked layout: Left side (or top) shows the Video Timeline visualization, Right side (or bottom) shows the Model-specific Prompts (Veo/Sora/Kling/etc.) using Tabs.",
+    "Apply 'Outfit' font to all h1, h2, h3 tags and 'Manrope' to body text. Ensure they are loaded via Google Fonts in index.html.",
+    "Do NOT use placeholder text for missing logos; strictly use the provided logo URL.",
+    "Implement the 'Credit Balance' card in the dashboard sidebar or top header with a subtle cyan or purple glow to draw attention to it.",
+    "Ensure the hero section on the landing page has a deep background with a subtle, animated radial gradient behind the text to make the 'Turn Any Video Into Powerful AI Prompts' headline pop."
+  ]
+}
