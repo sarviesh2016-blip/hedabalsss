@@ -1,7 +1,7 @@
-"""Auth helpers: Emergent Google session_token validation."""
+"""Auth helpers: Emergent Google session_token validation + daily credit refresh + first-user-admin bootstrap."""
 import os
 import logging
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from typing import Optional
 
 from fastapi import Header, Cookie, HTTPException, Depends, Request
@@ -20,6 +20,9 @@ ADMIN_EMAILS = {
 EMERGENT_SESSION_ENDPOINT = (
     "https://demobackend.emergentagent.com/auth/v1/env/oauth/session-data"
 )
+
+FREE_DAILY_CREDITS = 2          # Free-plan refill target
+REFRESH_INTERVAL_SECONDS = 86400  # 24h
 
 
 def emergent_get_session_data(session_id: str) -> dict:
@@ -69,7 +72,55 @@ async def get_current_user(
     user = await users_col.find_one({"user_id": sess["user_id"]}, PROJ)
     if not user:
         raise HTTPException(status_code=401, detail="User not found")
+
+    # Lazy daily-credit refresh for free-plan users
+    user = await refresh_free_credits_if_due(user)
     return user
+
+
+async def refresh_free_credits_if_due(user: dict) -> dict:
+    """Top free-plan users back up to FREE_DAILY_CREDITS once every 24h."""
+    try:
+        if user.get("plan") != "free":
+            return user
+        now = datetime.now(timezone.utc)
+        last_str = user.get("last_credit_refresh") or user.get("created_at")
+        if not last_str:
+            last = now - timedelta(days=2)
+        else:
+            try:
+                last = datetime.fromisoformat(last_str)
+            except Exception:
+                last = now - timedelta(days=2)
+            if last.tzinfo is None:
+                last = last.replace(tzinfo=timezone.utc)
+        if (now - last).total_seconds() < REFRESH_INTERVAL_SECONDS:
+            return user
+        # Refill only if below target
+        current = int(user.get("credits", 0))
+        new_credits = max(current, FREE_DAILY_CREDITS)
+        await users_col.update_one(
+            {"user_id": user["user_id"]},
+            {"$set": {
+                "credits": new_credits,
+                "last_credit_refresh": now.isoformat(),
+                "updated_at": now.isoformat(),
+            }},
+        )
+        user["credits"] = new_credits
+        user["last_credit_refresh"] = now.isoformat()
+        return user
+    except Exception as e:
+        logger.warning(f"daily refresh skipped: {e}")
+        return user
+
+
+async def should_promote_to_admin(email: str) -> bool:
+    """Email is in the ADMIN_EMAILS allow-list OR no admin exists yet (bootstrap)."""
+    if email.lower() in ADMIN_EMAILS:
+        return True
+    has_admin = await users_col.find_one({"role": "admin"}, PROJ)
+    return has_admin is None
 
 
 async def get_optional_user(

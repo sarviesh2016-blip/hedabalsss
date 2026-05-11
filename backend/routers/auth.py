@@ -4,7 +4,7 @@ from datetime import datetime, timedelta, timezone
 import uuid
 
 from db import users_col, sessions_col, PROJ
-from auth_utils import emergent_get_session_data, get_current_user, is_admin_email
+from auth_utils import emergent_get_session_data, get_current_user, should_promote_to_admin
 from models import UserPublic
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -30,7 +30,7 @@ async def auth_session(request: Request, response: Response):
         raise HTTPException(status_code=401, detail="Incomplete session data")
 
     now = datetime.now(timezone.utc)
-    role = "admin" if is_admin_email(email) else "user"
+    role = "admin" if await should_promote_to_admin(email) else "user"
 
     user = await users_col.find_one({"email": email}, PROJ)
     if user:

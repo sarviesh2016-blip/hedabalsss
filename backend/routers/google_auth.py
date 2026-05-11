@@ -14,7 +14,7 @@ from pydantic import BaseModel
 
 from db import users_col, sessions_col, PROJ
 from runtime_config import get_google_oauth
-from auth_utils import is_admin_email
+from auth_utils import should_promote_to_admin
 from models import UserPublic
 
 logger = logging.getLogger(__name__)
@@ -52,7 +52,7 @@ async def verify_google_id_token(payload: GoogleIdTokenIn, response: Response):
     picture = idinfo.get("picture")
 
     now = datetime.now(timezone.utc)
-    role = "admin" if is_admin_email(email) else "user"
+    role = "admin" if await should_promote_to_admin(email) else "user"
 
     user = await users_col.find_one({"email": email}, PROJ)
     if user:
@@ -72,6 +72,7 @@ async def verify_google_id_token(payload: GoogleIdTokenIn, response: Response):
             "email": email, "name": name, "picture": picture,
             "role": role,
             "credits": 2, "plan": "free",
+            "last_credit_refresh": now.isoformat(),
             "created_at": now.isoformat(), "updated_at": now.isoformat(),
         })
         user = await users_col.find_one({"user_id": user_id}, PROJ)

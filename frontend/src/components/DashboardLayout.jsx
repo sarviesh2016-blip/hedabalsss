@@ -5,10 +5,11 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import {
   LayoutDashboard, Upload, Bookmark, CreditCard, Code2,
-  Shield, LogOut, Sparkles, Menu, X
+  Shield, LogOut, Sparkles, Menu, Home as HomeIcon
 } from "lucide-react";
 
 const navItems = [
+  { to: "/", label: "Home", icon: HomeIcon, testid: "side-home", external: true },
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard, testid: "side-dashboard" },
   { to: "/upload", label: "New Generation", icon: Upload, testid: "side-upload" },
   { to: "/saved-prompts", label: "Saved Prompts", icon: Bookmark, testid: "side-saved" },
@@ -41,11 +42,12 @@ export default function DashboardLayout({ children }) {
           <NavLink
             key={n.to}
             to={n.to}
+            end={n.to === "/"}
             onClick={() => setOpen(false)}
             data-testid={n.testid}
             className={({ isActive }) =>
               `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all mb-1 ${
-                isActive
+                isActive && !n.external
                   ? "bg-zinc-100 text-zinc-900 border border-zinc-200"
                   : "text-secondary hover:text-zinc-900 hover:bg-zinc-100"
               }`

@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Menu, X } from "lucide-react";
 
 const navItems = [
+  { to: "/", label: "Home" },
   { to: "/pricing", label: "Pricing" },
   { to: "/api-docs", label: "API" },
   { to: "/blog", label: "Blog" },
@@ -26,6 +27,7 @@ export default function MarketingLayout({ children }) {
               <NavLink
                 key={n.to}
                 to={n.to}
+                end={n.to === "/"}
                 data-testid={`nav-${n.label.toLowerCase()}`}
                 className={({ isActive }) =>
                   `text-sm tracking-wide transition-colors ${isActive ? "text-zinc-900" : "text-secondary hover:text-zinc-900"}`

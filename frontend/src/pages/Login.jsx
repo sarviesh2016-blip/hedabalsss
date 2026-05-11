@@ -4,31 +4,32 @@ import { useAuth } from "@/contexts/AuthContext";
 import { api } from "@/lib/api";
 import Logo from "@/components/Logo";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Lock, Sparkles } from "lucide-react";
+import { ArrowLeft, Lock, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 
 // REMINDER: DO NOT HARDCODE THE URL, OR ADD ANY FALLBACKS OR REDIRECT URLS, THIS BREAKS THE AUTH
 export default function Login() {
   const navigate = useNavigate();
-  const { user, loading, refresh, setUser } = useAuth();
-  const [ownClientId, setOwnClientId] = useState("");
+  const { user, loading, setUser } = useAuth();
+  const [ownClientId, setOwnClientId] = useState(null);   // null = loading, "" = not configured, "xxx" = configured
   const gisDiv = useRef(null);
 
   useEffect(() => {
     if (!loading && user) navigate("/dashboard", { replace: true });
   }, [loading, user, navigate]);
 
-  // Fetch public site-config to know if a own Google Client ID is configured
   useEffect(() => {
     (async () => {
       try {
         const { data } = await api.get("/site-config");
-        if (data?.google_client_id) setOwnClientId(data.google_client_id);
-      } catch {}
+        setOwnClientId(data?.google_client_id || "");
+      } catch {
+        setOwnClientId("");
+      }
     })();
   }, []);
 
-  // Initialize Google Identity Services if a client_id is available
+  // Initialize Google Identity Services when client_id is available
   useEffect(() => {
     if (!ownClientId) return;
     const init = () => {
@@ -50,25 +51,18 @@ export default function Login() {
         },
       });
       window.google.accounts.id.renderButton(gisDiv.current, {
-        type: "standard",
-        theme: "outline",
-        size: "large",
-        text: "continue_with",
-        shape: "pill",
-        width: 320,
+        type: "standard", theme: "outline", size: "large",
+        text: "continue_with", shape: "pill", width: 340,
       });
     };
-
     if (window.google?.accounts?.id) { init(); return; }
     const s = document.createElement("script");
     s.src = "https://accounts.google.com/gsi/client";
-    s.async = true;
-    s.defer = true;
-    s.onload = init;
+    s.async = true; s.defer = true; s.onload = init;
     document.body.appendChild(s);
-  }, [ownClientId, navigate, refresh, setUser]);
+  }, [ownClientId, navigate, setUser]);
 
-  const handleEmergentGoogleLogin = () => {
+  const handleBootstrapLogin = () => {
     // REMINDER: DO NOT HARDCODE THE URL, OR ADD ANY FALLBACKS OR REDIRECT URLS, THIS BREAKS THE AUTH
     const redirectUrl = window.location.origin + "/dashboard";
     window.location.href = `https://auth.emergentagent.com/?redirect=${encodeURIComponent(redirectUrl)}`;
@@ -91,39 +85,47 @@ export default function Login() {
             Sign in to turn your videos into cinematic AI prompts.
           </p>
 
-          {/* Own Google OAuth (admin-configured) */}
-          {ownClientId ? (
-            <div className="mt-7 flex flex-col items-center gap-3" data-testid="google-own-section">
-              <p className="text-[10px] uppercase tracking-widest text-muted">Sign in with Google</p>
+          {ownClientId === null && (
+            <div className="mt-8 flex justify-center">
+              <div className="w-8 h-8 border-2 border-zinc-200 border-t-violet-600 rounded-full animate-spin" />
+            </div>
+          )}
+
+          {ownClientId && (
+            <div className="mt-8 flex flex-col items-center gap-2" data-testid="google-own-section">
               <div ref={gisDiv} data-testid="google-own-btn-container" />
+              <p className="text-[10px] uppercase tracking-widest text-muted mt-2">Sign in with Google</p>
             </div>
-          ) : null}
+          )}
 
-          {/* Divider when both are present */}
-          {ownClientId ? (
-            <div className="flex items-center gap-3 my-6">
-              <div className="flex-1 h-px bg-zinc-200" />
-              <span className="text-[10px] uppercase tracking-widest text-muted">or</span>
-              <div className="flex-1 h-px bg-zinc-200" />
+          {ownClientId === "" && (
+            <div className="mt-8 space-y-4" data-testid="google-not-configured">
+              <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm">
+                <p className="flex items-center gap-2 text-amber-900 font-medium">
+                  <AlertCircle size={16} /> Google sign-in not configured yet
+                </p>
+                <p className="text-amber-800 text-xs mt-1.5 leading-relaxed">
+                  The site admin needs to paste a Google OAuth Client ID in
+                  <span className="font-mono"> Admin → Integrations</span>.
+                </p>
+              </div>
+              <button
+                onClick={handleBootstrapLogin}
+                data-testid="admin-bootstrap-btn"
+                className="w-full text-center text-xs text-secondary hover:text-zinc-900 underline underline-offset-4"
+              >
+                First-time admin? Click here to bootstrap login →
+              </button>
             </div>
-          ) : <div className="mt-7" />}
+          )}
 
-          {/* Emergent-managed Google (default, always available) */}
-          <Button
-            data-testid="google-login-btn"
-            onClick={handleEmergentGoogleLogin}
-            className="w-full h-12 bg-zinc-900 hover:bg-zinc-800 text-white rounded-full font-medium flex items-center justify-center gap-3"
-          >
-            <Sparkles size={16} /> Continue with Emergent Auth
-          </Button>
-
-          <div className="mt-6 text-center">
+          <div className="mt-8 text-center">
             <p className="text-xs text-muted flex items-center justify-center gap-1.5">
-              <Lock size={11} /> Secure OAuth · no password stored
+              <Lock size={11} /> Secure OAuth · no passwords stored
             </p>
           </div>
 
-          <div className="mt-8 pt-6 border-t border-zinc-200 text-center">
+          <div className="mt-6 pt-6 border-t border-zinc-200 text-center">
             <p className="text-xs text-muted">By continuing you agree to our Terms &amp; Privacy.</p>
           </div>
         </div>
