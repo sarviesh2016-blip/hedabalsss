@@ -13,6 +13,7 @@ load_dotenv(ROOT_DIR / ".env")
 
 from storage_service import init_storage  # noqa: E402
 from routers.auth import router as auth_router  # noqa: E402
+from routers.google_auth import router as google_auth_router  # noqa: E402
 from routers.videos import router as videos_router  # noqa: E402
 from routers.generations import router as gen_router  # noqa: E402
 from routers.prompts import router as prompts_router  # noqa: E402
@@ -55,6 +56,7 @@ async def health():
 
 # Mount feature routers under /api
 api_router.include_router(auth_router)
+api_router.include_router(google_auth_router)
 api_router.include_router(videos_router)
 api_router.include_router(gen_router)
 api_router.include_router(prompts_router)

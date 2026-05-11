@@ -9,7 +9,7 @@ export default function ProtectedRoute({ children, adminOnly = false }) {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="w-10 h-10 border-2 border-white/10 border-t-violet-500 rounded-full animate-spin" />
+        <div className="w-10 h-10 border-2 border-zinc-200 border-t-violet-600 rounded-full animate-spin" />
       </div>
     );
   }

@@ -87,14 +87,14 @@ export default function ApiDocs() {
             {keys.length === 0 ? (
               <p className="text-secondary text-sm mt-6">No keys yet.</p>
             ) : (
-              <div className="mt-5 divide-y divide-white/5">
+              <div className="mt-5 divide-y divide-zinc-200">
                 {keys.map(k => (
                   <div key={k.api_key_id} className="py-3 flex items-center justify-between" data-testid={`api-key-${k.api_key_id}`}>
                     <div className="min-w-0">
                       <p className="text-sm font-medium">{k.name}</p>
                       <p className="text-xs font-mono text-muted">{k.key_prefix}…</p>
                     </div>
-                    <button onClick={() => remove(k.api_key_id)} data-testid={`revoke-${k.api_key_id}`} className="text-secondary hover:text-rose-400 p-2"><Trash2 size={14} /></button>
+                    <button onClick={() => remove(k.api_key_id)} data-testid={`revoke-${k.api_key_id}`} className="text-secondary hover:text-rose-600 p-2"><Trash2 size={14} /></button>
                   </div>
                 ))}
               </div>
@@ -105,10 +105,10 @@ export default function ApiDocs() {
         <div className="mt-10">
           <h2 className="text-2xl font-heading">Endpoints</h2>
           <div className="mt-5 glass rounded-2xl overflow-hidden">
-            <div className="divide-y divide-white/5">
+            <div className="divide-y divide-zinc-200">
               {ENDPOINTS.map((e) => (
                 <div key={e.path + e.method} className="px-5 py-4 flex items-center gap-4">
-                  <span className={`text-[10px] font-mono px-2 py-1 rounded ${e.method === "POST" ? "bg-violet-500/15 text-violet-300" : "bg-cyan-500/15 text-cyan-300"}`}>{e.method}</span>
+                  <span className={`text-[10px] font-mono px-2 py-1 rounded ${e.method === "POST" ? "bg-violet-100 text-violet-700" : "bg-cyan-100 text-cyan-700"}`}>{e.method}</span>
                   <code className="text-sm font-mono">{e.path}</code>
                   <span className="text-xs text-secondary ml-auto hidden sm:block">{e.desc}</span>
                 </div>
@@ -120,26 +120,26 @@ export default function ApiDocs() {
         <div className="mt-10">
           <h2 className="text-2xl font-heading">Quick start</h2>
           <div className="mt-4 relative">
-            <pre className="bg-black/60 border border-white/5 rounded-2xl p-5 text-xs font-mono text-secondary overflow-x-auto" data-testid="curl-snippet">{CURL}</pre>
-            <button onClick={() => copy(CURL)} data-testid="copy-curl-btn" className="absolute top-3 right-3 text-secondary hover:text-white"><Copy size={14} /></button>
+            <pre className="bg-zinc-100 border border-zinc-200 rounded-2xl p-5 text-xs font-mono text-secondary overflow-x-auto" data-testid="curl-snippet">{CURL}</pre>
+            <button onClick={() => copy(CURL)} data-testid="copy-curl-btn" className="absolute top-3 right-3 text-secondary hover:text-zinc-900"><Copy size={14} /></button>
           </div>
         </div>
       </section>
 
       <Dialog open={creating} onOpenChange={(v) => { setCreating(v); if (!v) setNewKey(null); }}>
-        <DialogContent className="bg-[#0a0a0c] border-white/10 text-white">
+        <DialogContent className="bg-white border-zinc-200 text-zinc-900">
           <DialogHeader><DialogTitle>{newKey ? "Save your new key" : "Create API key"}</DialogTitle></DialogHeader>
           {!newKey ? (
             <div className="space-y-3">
               <p className="text-secondary text-sm">Name this key for your own reference.</p>
-              <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Production server" data-testid="new-key-name" className="bg-black/40 border-white/10 text-white" />
+              <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Production server" data-testid="new-key-name" className="bg-zinc-100 border-zinc-200 text-zinc-900" />
               <Button onClick={create} data-testid="confirm-create-key" className="btn-gradient w-full rounded-full"><Key size={14} className="mr-1" /> Create</Button>
             </div>
           ) : (
             <div className="space-y-3">
               <p className="text-secondary text-sm">Copy this key now — you won't see it again.</p>
-              <div className="bg-black/60 border border-white/10 rounded-lg p-3 font-mono text-xs break-all" data-testid="new-key-value">{newKey.key}</div>
-              <Button onClick={() => copy(newKey.key)} data-testid="copy-new-key" className="w-full bg-white/5 border border-white/10 hover:bg-white/10 text-white rounded-full">Copy</Button>
+              <div className="bg-zinc-100 border border-zinc-200 rounded-lg p-3 font-mono text-xs break-all" data-testid="new-key-value">{newKey.key}</div>
+              <Button onClick={() => copy(newKey.key)} data-testid="copy-new-key" className="w-full bg-zinc-100 border border-zinc-200 hover:bg-zinc-200 text-zinc-900 rounded-full">Copy</Button>
               <Button onClick={() => { setNewKey(null); setCreating(false); }} className="w-full btn-gradient rounded-full">Done</Button>
             </div>
           )}

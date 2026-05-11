@@ -21,19 +21,29 @@ export default function PromptResult() {
   const [saveTitle, setSaveTitle] = useState("");
 
   useEffect(() => {
-    (async () => {
+    let stopped = false;
+    let timer = null;
+
+    const fetchOnce = async () => {
       try {
         const { data } = await api.get(`/generations/${id}`);
+        if (stopped) return;
         setGen(data);
         setActiveModel(data.selected_model || "veo");
         setSaveTitle((data.output?.shortPrompt || "Untitled prompt").slice(0, 60));
+        setLoading(false);
+        if (data.status === "processing" || data.status === "queued") {
+          timer = setTimeout(fetchOnce, 2000);
+        }
       } catch (e) {
+        if (stopped) return;
         toast.error("Could not load generation");
         navigate("/dashboard");
-      } finally {
-        setLoading(false);
       }
-    })();
+    };
+
+    fetchOnce();
+    return () => { stopped = true; if (timer) clearTimeout(timer); };
   }, [id, navigate]);
 
   const copy = async (text, label = "Prompt") => {
@@ -78,7 +88,7 @@ export default function PromptResult() {
   };
 
   if (loading) {
-    return <DashboardLayout><div className="space-y-3 max-w-4xl">{[1,2,3,4,5].map(i => <div key={i} className="h-20 rounded-2xl bg-white/5 animate-pulse" />)}</div></DashboardLayout>;
+    return <DashboardLayout><div className="space-y-3 max-w-4xl">{[1,2,3,4,5].map(i => <div key={i} className="h-20 rounded-2xl bg-zinc-100 animate-pulse" />)}</div></DashboardLayout>;
   }
   if (!gen) return null;
 
@@ -88,7 +98,7 @@ export default function PromptResult() {
 
   return (
     <DashboardLayout>
-      <button onClick={() => navigate(-1)} data-testid="back-btn" className="text-secondary hover:text-white text-sm flex items-center gap-2 mb-5">
+      <button onClick={() => navigate(-1)} data-testid="back-btn" className="text-secondary hover:text-zinc-900 text-sm flex items-center gap-2 mb-5">
         <ArrowLeft size={14} /> Back
       </button>
 
@@ -98,17 +108,22 @@ export default function PromptResult() {
             <span className="chip">{gen.selected_model?.toUpperCase()}</span>
             <span className="chip">{gen.style_preset}</span>
             <span className="chip">{new Date(gen.created_at).toLocaleString()}</span>
+            {gen.status === "processing" && (
+              <span className="chip" style={{background:'rgba(99,102,241,0.1)',color:'#6366F1',borderColor:'rgba(99,102,241,0.3)'}}>
+                <span className="w-1.5 h-1.5 rounded-full bg-violet-500 animate-pulse mr-1" /> Analyzing with Gemini 3 Pro…
+              </span>
+            )}
           </div>
-          <h1 className="text-3xl sm:text-4xl font-heading font-semibold max-w-3xl">{out.summary || "Generated prompt"}</h1>
+          <h1 className="text-3xl sm:text-4xl font-heading font-semibold max-w-3xl">{out.summary || (gen.status === "processing" ? "Analyzing your video…" : "Generated prompt")}</h1>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button data-testid="save-btn" onClick={() => setSaveOpen(true)} className="bg-white/5 border border-white/10 hover:bg-white/10 text-white rounded-full">
+          <Button data-testid="save-btn" onClick={() => setSaveOpen(true)} className="bg-zinc-100 border border-zinc-200 hover:bg-zinc-200 text-zinc-900 rounded-full">
             <Bookmark size={14} className="mr-1" /> Save
           </Button>
-          <Button data-testid="download-txt-btn" onClick={downloadTxt} className="bg-white/5 border border-white/10 hover:bg-white/10 text-white rounded-full">
+          <Button data-testid="download-txt-btn" onClick={downloadTxt} className="bg-zinc-100 border border-zinc-200 hover:bg-zinc-200 text-zinc-900 rounded-full">
             <Download size={14} className="mr-1" /> TXT
           </Button>
-          <Button data-testid="download-json-btn" onClick={downloadJson} className="bg-white/5 border border-white/10 hover:bg-white/10 text-white rounded-full">
+          <Button data-testid="download-json-btn" onClick={downloadJson} className="bg-zinc-100 border border-zinc-200 hover:bg-zinc-200 text-zinc-900 rounded-full">
             <FileJson size={14} className="mr-1" /> JSON
           </Button>
         </div>
@@ -123,8 +138,8 @@ export default function PromptResult() {
           ) : (
             <div className="space-y-3">
               {scenes.map((s, i) => (
-                <div key={i} className="relative pl-5 py-3 border-l-2 border-cyan-400/40 hover:border-cyan-400 transition-colors" data-testid={`scene-${i}`}>
-                  <p className="text-xs font-mono text-cyan-300">{s.timecode}</p>
+                <div key={i} className="relative pl-5 py-3 border-l-2 border-cyan-500 hover:border-cyan-500 transition-colors" data-testid={`scene-${i}`}>
+                  <p className="text-xs font-mono text-cyan-700">{s.timecode}</p>
                   <p className="text-sm mt-1 font-medium">{s.scene}</p>
                   <div className="flex flex-wrap gap-1.5 mt-2">
                     {s.cameraMove && <span className="chip text-[10px]">cam: {s.cameraMove}</span>}
@@ -135,7 +150,7 @@ export default function PromptResult() {
                   <button
                     onClick={() => copy(s.prompt, `Scene ${i + 1}`)}
                     data-testid={`scene-copy-${i}`}
-                    className="absolute top-3 right-0 text-secondary hover:text-white p-1"
+                    className="absolute top-3 right-0 text-secondary hover:text-zinc-900 p-1"
                   >
                     <Copy size={12} />
                   </button>
@@ -144,7 +159,7 @@ export default function PromptResult() {
             </div>
           )}
 
-          <div className="mt-6 pt-6 border-t border-white/5 space-y-3 text-sm">
+          <div className="mt-6 pt-6 border-t border-zinc-200 space-y-3 text-sm">
             {out.cameraDetails && <Row label="Camera" value={out.cameraDetails} />}
             {out.lightingDetails && <Row label="Lighting" value={out.lightingDetails} />}
             {out.mood && <Row label="Mood" value={out.mood} />}
@@ -159,7 +174,7 @@ export default function PromptResult() {
           <div className="glass rounded-2xl p-6" data-testid="short-prompt-card">
             <div className="flex items-center justify-between mb-3">
               <p className="text-xs uppercase tracking-widest text-muted">Short prompt</p>
-              <button onClick={() => copy(out.shortPrompt, "Short prompt")} data-testid="copy-short" className="text-secondary hover:text-white"><Copy size={14} /></button>
+              <button onClick={() => copy(out.shortPrompt, "Short prompt")} data-testid="copy-short" className="text-secondary hover:text-zinc-900"><Copy size={14} /></button>
             </div>
             <p className="text-sm leading-relaxed font-mono">{out.shortPrompt || "—"}</p>
           </div>
@@ -167,7 +182,7 @@ export default function PromptResult() {
           <div className="glass rounded-2xl p-6" data-testid="detailed-prompt-card">
             <div className="flex items-center justify-between mb-3">
               <p className="text-xs uppercase tracking-widest text-muted">Detailed cinematic prompt</p>
-              <button onClick={() => copy(out.detailedPrompt, "Detailed prompt")} data-testid="copy-detailed" className="text-secondary hover:text-white"><Copy size={14} /></button>
+              <button onClick={() => copy(out.detailedPrompt, "Detailed prompt")} data-testid="copy-detailed" className="text-secondary hover:text-zinc-900"><Copy size={14} /></button>
             </div>
             <p className="text-sm leading-relaxed font-mono text-secondary">{out.detailedPrompt || "—"}</p>
           </div>
@@ -175,9 +190,9 @@ export default function PromptResult() {
           <div className="glass rounded-2xl p-6">
             <p className="text-xs uppercase tracking-widest text-muted mb-4">Per-model prompts</p>
             <Tabs value={activeModel} onValueChange={setActiveModel}>
-              <TabsList className="bg-white/5 p-1 rounded-lg flex flex-wrap h-auto">
+              <TabsList className="bg-zinc-100 p-1 rounded-lg flex flex-wrap h-auto">
                 {MODELS.map(m => (
-                  <TabsTrigger key={m} value={m} data-testid={`model-tab-${m}`} className="data-[state=active]:bg-white/10 data-[state=active]:text-white text-secondary text-xs rounded-md">
+                  <TabsTrigger key={m} value={m} data-testid={`model-tab-${m}`} className="data-[state=active]:bg-zinc-200 data-[state=active]:text-zinc-900 text-secondary text-xs rounded-md">
                     {m.toUpperCase()}
                   </TabsTrigger>
                 ))}
@@ -185,13 +200,13 @@ export default function PromptResult() {
               {MODELS.map(m => (
                 <TabsContent key={m} value={m} className="mt-4">
                   <div className="relative">
-                    <pre className="font-mono text-xs leading-relaxed text-secondary bg-black/40 rounded-xl p-4 border border-white/5 whitespace-pre-wrap break-words min-h-[160px]" data-testid={`model-prompt-${m}`}>
+                    <pre className="font-mono text-xs leading-relaxed text-secondary bg-zinc-100 rounded-xl p-4 border border-zinc-200 whitespace-pre-wrap break-words min-h-[160px]" data-testid={`model-prompt-${m}`}>
                       {modelPrompts[m] || "(no prompt for this model)"}
                     </pre>
                     <button
                       onClick={() => copy(modelPrompts[m], m.toUpperCase())}
                       data-testid={`copy-model-${m}`}
-                      className="absolute top-3 right-3 text-secondary hover:text-white"
+                      className="absolute top-3 right-3 text-secondary hover:text-zinc-900"
                     >
                       <Copy size={14} />
                     </button>
@@ -204,11 +219,11 @@ export default function PromptResult() {
       </div>
 
       <Dialog open={saveOpen} onOpenChange={setSaveOpen}>
-        <DialogContent className="bg-[#0a0a0c] border-white/10 text-white">
+        <DialogContent className="bg-white border-zinc-200 text-zinc-900">
           <DialogHeader><DialogTitle>Save prompt</DialogTitle></DialogHeader>
           <div className="space-y-3">
             <p className="text-secondary text-sm">Give your prompt a title.</p>
-            <Input value={saveTitle} onChange={(e) => setSaveTitle(e.target.value)} data-testid="save-title-input" className="bg-black/40 border-white/10 text-white" />
+            <Input value={saveTitle} onChange={(e) => setSaveTitle(e.target.value)} data-testid="save-title-input" className="bg-zinc-100 border-zinc-200 text-zinc-900" />
             <Button onClick={savePrompt} data-testid="confirm-save-btn" className="btn-gradient w-full rounded-full">Save to library</Button>
           </div>
         </DialogContent>

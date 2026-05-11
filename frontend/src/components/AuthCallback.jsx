@@ -43,7 +43,7 @@ export default function AuthCallback() {
   return (
     <div className="min-h-screen flex items-center justify-center">
       <div className="text-center">
-        <div className="w-12 h-12 border-2 border-white/10 border-t-violet-500 rounded-full animate-spin mx-auto mb-4" />
+        <div className="w-12 h-12 border-2 border-zinc-200 border-t-violet-600 rounded-full animate-spin mx-auto mb-4" />
         <p className="text-secondary">Completing sign-in…</p>
       </div>
     </div>

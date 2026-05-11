@@ -89,12 +89,12 @@ export default function Pricing() {
               data-testid={`plan-card-${p.id}`}
               className={`relative rounded-2xl p-6 ${
                 p.highlight
-                  ? "bg-brand-gradient-soft border-2 border-violet-500/40 ring-cyan-glow"
+                  ? "bg-brand-gradient-soft border-2 border-violet-400 ring-cyan-glow"
                   : "glass"
               }`}
             >
               {p.highlight && (
-                <div className="absolute -top-3 left-1/2 -translate-x-1/2 chip bg-brand-gradient !text-white !border-transparent">
+                <div className="absolute -top-3 left-1/2 -translate-x-1/2 chip bg-brand-gradient !text-zinc-900 !border-transparent">
                   <Zap size={10} /> Most Popular
                 </div>
               )}
@@ -106,7 +106,7 @@ export default function Pricing() {
               <ul className="mt-6 space-y-2.5">
                 {p.features.map((f) => (
                   <li key={f} className="flex items-start gap-2 text-sm text-secondary">
-                    <CheckCircle2 size={15} className="text-cyan-400 mt-0.5 flex-shrink-0" />
+                    <CheckCircle2 size={15} className="text-cyan-600 mt-0.5 flex-shrink-0" />
                     <span>{f}</span>
                   </li>
                 ))}
@@ -117,7 +117,7 @@ export default function Pricing() {
                 className={`w-full mt-7 rounded-full h-11 ${
                   p.highlight
                     ? "btn-gradient"
-                    : "bg-white/5 border border-white/10 hover:bg-white/10 text-white"
+                    : "bg-zinc-100 border border-zinc-200 hover:bg-zinc-200 text-zinc-900"
                 }`}
               >
                 {p.cta}
@@ -137,7 +137,7 @@ export default function Pricing() {
                 </div>
                 <div className="text-right">
                   <p className="text-2xl font-heading font-semibold gradient-text">{pk.price}</p>
-                  <Button onClick={() => navigate("/billing")} data-testid={`pack-buy-${pk.id}`} size="sm" className="mt-2 bg-white/5 border border-white/10 hover:bg-white/10 text-white rounded-full">
+                  <Button onClick={() => navigate("/billing")} data-testid={`pack-buy-${pk.id}`} size="sm" className="mt-2 bg-zinc-100 border border-zinc-200 hover:bg-zinc-200 text-zinc-900 rounded-full">
                     Buy
                   </Button>
                 </div>

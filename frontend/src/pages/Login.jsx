@@ -1,59 +1,130 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { api } from "@/lib/api";
 import Logo from "@/components/Logo";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Lock } from "lucide-react";
+import { ArrowLeft, Lock, Sparkles } from "lucide-react";
+import { toast } from "sonner";
 
 // REMINDER: DO NOT HARDCODE THE URL, OR ADD ANY FALLBACKS OR REDIRECT URLS, THIS BREAKS THE AUTH
 export default function Login() {
   const navigate = useNavigate();
-  const { user, loading } = useAuth();
+  const { user, loading, refresh, setUser } = useAuth();
+  const [ownClientId, setOwnClientId] = useState("");
+  const gisDiv = useRef(null);
 
   useEffect(() => {
     if (!loading && user) navigate("/dashboard", { replace: true });
   }, [loading, user, navigate]);
 
-  const handleGoogleLogin = () => {
+  // Fetch public site-config to know if a own Google Client ID is configured
+  useEffect(() => {
+    (async () => {
+      try {
+        const { data } = await api.get("/site-config");
+        if (data?.google_client_id) setOwnClientId(data.google_client_id);
+      } catch {}
+    })();
+  }, []);
+
+  // Initialize Google Identity Services if a client_id is available
+  useEffect(() => {
+    if (!ownClientId) return;
+    const init = () => {
+      // REMINDER: DO NOT HARDCODE THE URL, OR ADD ANY FALLBACKS OR REDIRECT URLS, THIS BREAKS THE AUTH
+      if (!window.google?.accounts?.id || !gisDiv.current) return;
+      window.google.accounts.id.initialize({
+        client_id: ownClientId,
+        callback: async (resp) => {
+          try {
+            const { data } = await api.post("/auth/google-own/verify", { credential: resp.credential });
+            if (data.session_token) localStorage.setItem("session_token", data.session_token);
+            setUser(data.user);
+            toast.success("Signed in");
+            navigate("/dashboard", { state: { user: data.user }, replace: true });
+          } catch (e) {
+            console.error(e);
+            toast.error(e?.response?.data?.detail || "Google sign-in failed");
+          }
+        },
+      });
+      window.google.accounts.id.renderButton(gisDiv.current, {
+        type: "standard",
+        theme: "outline",
+        size: "large",
+        text: "continue_with",
+        shape: "pill",
+        width: 320,
+      });
+    };
+
+    if (window.google?.accounts?.id) { init(); return; }
+    const s = document.createElement("script");
+    s.src = "https://accounts.google.com/gsi/client";
+    s.async = true;
+    s.defer = true;
+    s.onload = init;
+    document.body.appendChild(s);
+  }, [ownClientId, navigate, refresh, setUser]);
+
+  const handleEmergentGoogleLogin = () => {
     // REMINDER: DO NOT HARDCODE THE URL, OR ADD ANY FALLBACKS OR REDIRECT URLS, THIS BREAKS THE AUTH
     const redirectUrl = window.location.origin + "/dashboard";
     window.location.href = `https://auth.emergentagent.com/?redirect=${encodeURIComponent(redirectUrl)}`;
   };
 
   return (
-    <div className="min-h-screen relative flex items-center justify-center px-5">
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[700px] h-[700px] rounded-full" style={{ background: "radial-gradient(closest-side, rgba(99,102,241,0.18), transparent)" }} />
-      <button onClick={() => navigate("/")} data-testid="back-home-btn" className="absolute top-6 left-6 text-secondary hover:text-white flex items-center gap-2 text-sm">
+    <div className="min-h-screen relative flex items-center justify-center px-5 bg-zinc-50">
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[700px] h-[700px] rounded-full" style={{ background: "radial-gradient(closest-side, rgba(99,102,241,0.08), transparent)" }} />
+      <button onClick={() => navigate("/")} data-testid="back-home-btn" className="absolute top-6 left-6 text-secondary hover:text-zinc-900 flex items-center gap-2 text-sm">
         <ArrowLeft size={16} /> Back home
       </button>
 
       <div className="relative w-full max-w-md">
-        <div className="glass-strong rounded-3xl p-8 ring-cyan-glow">
+        <div className="glass-strong rounded-3xl p-8">
           <div className="flex justify-center mb-6">
-            <Logo className="h-10" to={null} />
+            <Logo className="h-9" to={null} />
           </div>
           <h1 className="text-3xl font-heading font-semibold text-center">Welcome</h1>
           <p className="text-secondary text-sm text-center mt-2">
             Sign in to turn your videos into cinematic AI prompts.
           </p>
 
+          {/* Own Google OAuth (admin-configured) */}
+          {ownClientId ? (
+            <div className="mt-7 flex flex-col items-center gap-3" data-testid="google-own-section">
+              <p className="text-[10px] uppercase tracking-widest text-muted">Sign in with Google</p>
+              <div ref={gisDiv} data-testid="google-own-btn-container" />
+            </div>
+          ) : null}
+
+          {/* Divider when both are present */}
+          {ownClientId ? (
+            <div className="flex items-center gap-3 my-6">
+              <div className="flex-1 h-px bg-zinc-200" />
+              <span className="text-[10px] uppercase tracking-widest text-muted">or</span>
+              <div className="flex-1 h-px bg-zinc-200" />
+            </div>
+          ) : <div className="mt-7" />}
+
+          {/* Emergent-managed Google (default, always available) */}
           <Button
             data-testid="google-login-btn"
-            onClick={handleGoogleLogin}
-            className="w-full mt-8 h-12 bg-white text-black hover:bg-white/90 rounded-full font-medium flex items-center justify-center gap-3"
+            onClick={handleEmergentGoogleLogin}
+            className="w-full h-12 bg-zinc-900 hover:bg-zinc-800 text-white rounded-full font-medium flex items-center justify-center gap-3"
           >
-            <svg width="18" height="18" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84C6.71 7.31 9.14 5.38 12 5.38z"/></svg>
-            Continue with Google
+            <Sparkles size={16} /> Continue with Emergent Auth
           </Button>
 
           <div className="mt-6 text-center">
             <p className="text-xs text-muted flex items-center justify-center gap-1.5">
-              <Lock size={11} /> Secured by Emergent Auth
+              <Lock size={11} /> Secure OAuth · no password stored
             </p>
           </div>
 
-          <div className="mt-8 pt-6 border-t border-white/5 text-center">
-            <p className="text-xs text-muted">By continuing you agree to our Terms & Privacy.</p>
+          <div className="mt-8 pt-6 border-t border-zinc-200 text-center">
+            <p className="text-xs text-muted">By continuing you agree to our Terms &amp; Privacy.</p>
           </div>
         </div>
       </div>

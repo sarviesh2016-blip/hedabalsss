@@ -25,7 +25,7 @@ export default function Logo({ className = "", iconOnly = false, to = "/" }) {
           boxShadow: "0 0 14px rgba(139,92,246,0.45)",
         }}
       >
-        <Play size={cfg.icon - 6} className="text-white fill-white" />
+        <Play size={cfg.icon - 6} className="text-zinc-900 fill-white" />
       </span>
       {!iconOnly && (
         <span className={`font-heading font-semibold tracking-tight ${cfg.text}`}>

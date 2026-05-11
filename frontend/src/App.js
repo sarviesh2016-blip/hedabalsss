@@ -4,6 +4,7 @@ import { Toaster } from "sonner";
 import "@/App.css";
 
 import { AuthProvider } from "@/contexts/AuthContext";
+import { SiteConfigProvider } from "@/contexts/SiteConfigContext";
 import AuthCallback from "@/components/AuthCallback";
 import ProtectedRoute from "@/components/ProtectedRoute";
 
@@ -50,10 +51,12 @@ export default function App() {
   return (
     <div className="App">
       <BrowserRouter>
-        <AuthProvider>
-          <AppRouter />
-          <Toaster theme="dark" position="top-right" richColors closeButton />
-        </AuthProvider>
+        <SiteConfigProvider>
+          <AuthProvider>
+            <AppRouter />
+            <Toaster theme="light" position="top-right" richColors closeButton />
+          </AuthProvider>
+        </SiteConfigProvider>
       </BrowserRouter>
     </div>
   );

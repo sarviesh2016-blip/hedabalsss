@@ -1,6 +1,7 @@
 """Video upload + listing endpoints."""
 import os
 import uuid
+import tempfile
 import logging
 from datetime import datetime, timezone
 
@@ -9,14 +10,12 @@ from fastapi import APIRouter, UploadFile, File, Depends, HTTPException, Header,
 from db import videos_col, PROJ
 from auth_utils import get_current_user
 from storage_service import put_object, get_object, APP_NAME
+from video_utils import probe_duration, extract_thumbnail
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["videos"])
 
 ALLOWED_EXT = {"mp4", "mov", "webm", "m4v", "quicktime"}
-ALLOWED_MIME = {
-    "video/mp4", "video/quicktime", "video/webm", "video/x-m4v", "video/mov"
-}
 MAX_SIZE_BYTES = 100 * 1024 * 1024  # 100MB
 
 EXT_TO_MIME = {
@@ -28,7 +27,6 @@ EXT_TO_MIME = {
 
 
 def _resolve_content_type(file_content_type: str | None, ext: str) -> str:
-    """Prefer a real video/* content type; fall back to extension-based mapping."""
     if file_content_type and file_content_type.startswith("video/"):
         return file_content_type
     return EXT_TO_MIME.get(ext, "video/mp4")
@@ -53,6 +51,33 @@ async def upload_video(file: UploadFile = File(...), user=Depends(get_current_us
     storage_path = f"{APP_NAME}/videos/{user['user_id']}/{video_id}.{ext}"
     content_type = _resolve_content_type(file.content_type, ext)
 
+    # Probe duration + extract thumbnail from a temp copy
+    duration = None
+    thumb_url = None
+    tmp_path = None
+    try:
+        fd, tmp_path = tempfile.mkstemp(suffix=f".{ext}")
+        with os.fdopen(fd, "wb") as f:
+            f.write(data)
+        duration = probe_duration(tmp_path)
+        thumb_bytes = extract_thumbnail(tmp_path, at_seconds=min(1.0, (duration or 1.0) / 2))
+        if thumb_bytes:
+            thumb_path = f"{APP_NAME}/thumbs/{user['user_id']}/{video_id}.jpg"
+            try:
+                from storage_service import put_object as _put
+                _put(thumb_path, thumb_bytes, "image/jpeg")
+                thumb_url = f"/api/videos/{video_id}/thumbnail"
+            except Exception as e:
+                logger.warning(f"thumbnail upload failed: {e}")
+    except Exception as e:
+        logger.warning(f"video probe failed: {e}")
+    finally:
+        if tmp_path:
+            try:
+                os.unlink(tmp_path)
+            except Exception:
+                pass
+
     try:
         result = put_object(storage_path, data, content_type)
     except Exception as e:
@@ -66,8 +91,9 @@ async def upload_video(file: UploadFile = File(...), user=Depends(get_current_us
         "file_name": file.filename,
         "storage_path": result.get("path", storage_path),
         "file_url": f"/api/videos/{video_id}/stream",
-        "thumbnail_url": None,
-        "duration": None,
+        "thumbnail_url": thumb_url,
+        "thumbnail_path": f"{APP_NAME}/thumbs/{user['user_id']}/{video_id}.jpg" if thumb_url else None,
+        "duration": duration,
         "file_size": size,
         "content_type": content_type,
         "status": "uploaded",
@@ -92,11 +118,7 @@ async def get_video(video_id: str, user=Depends(get_current_user)):
     return v
 
 
-@router.get("/videos/{video_id}/stream")
-async def stream_video(video_id: str, auth: str = Query(None),
-                        authorization: str = Header(None)):
-    """Stream the video bytes. Allows query param auth for <video src=...?auth=token>."""
-    # Manual auth check (img/video tags can't pass headers)
+async def _check_token(authorization: str | None, auth: str | None):
     from auth_utils import sessions_col
     token = None
     if authorization and authorization.lower().startswith("bearer "):
@@ -108,15 +130,36 @@ async def stream_video(video_id: str, auth: str = Query(None),
     sess = await sessions_col.find_one({"session_token": token}, PROJ)
     if not sess:
         raise HTTPException(status_code=401, detail="Invalid session")
+    return sess
 
+
+@router.get("/videos/{video_id}/stream")
+async def stream_video(video_id: str, auth: str = Query(None),
+                        authorization: str = Header(None)):
+    sess = await _check_token(authorization, auth)
     v = await videos_col.find_one({"video_id": video_id}, PROJ)
     if not v:
         raise HTTPException(status_code=404, detail="Video not found")
     if v["user_id"] != sess["user_id"]:
         raise HTTPException(status_code=403, detail="Forbidden")
-
     try:
         data, ct = get_object(v["storage_path"])
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Storage read failed: {e}")
     return Response(content=data, media_type=v.get("content_type", ct))
+
+
+@router.get("/videos/{video_id}/thumbnail")
+async def thumbnail(video_id: str, auth: str = Query(None),
+                     authorization: str = Header(None)):
+    sess = await _check_token(authorization, auth)
+    v = await videos_col.find_one({"video_id": video_id}, PROJ)
+    if not v or not v.get("thumbnail_path"):
+        raise HTTPException(status_code=404, detail="Thumbnail not found")
+    if v["user_id"] != sess["user_id"]:
+        raise HTTPException(status_code=403, detail="Forbidden")
+    try:
+        data, ct = get_object(v["thumbnail_path"])
+    except Exception:
+        raise HTTPException(status_code=404, detail="Thumbnail not available")
+    return Response(content=data, media_type="image/jpeg")

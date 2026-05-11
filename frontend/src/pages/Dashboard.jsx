@@ -8,11 +8,11 @@ import { Upload, Film, Sparkles, TrendingUp, Clock, ArrowUpRight } from "lucide-
 import { motion } from "framer-motion";
 
 const STATUS_COLORS = {
-  completed: "text-emerald-400 bg-emerald-400/10 border-emerald-400/20",
-  processing: "text-cyan-300 bg-cyan-400/10 border-cyan-400/20",
-  failed: "text-rose-400 bg-rose-400/10 border-rose-400/20",
-  queued: "text-amber-300 bg-amber-400/10 border-amber-400/20",
-  uploaded: "text-secondary bg-white/5 border-white/10",
+  completed: "text-emerald-600 bg-emerald-50 border-emerald-200",
+  processing: "text-cyan-700 bg-cyan-50 border-cyan-300",
+  failed: "text-rose-600 bg-rose-50 border-rose-200",
+  queued: "text-amber-700 bg-amber-50 border-amber-200",
+  uploaded: "text-secondary bg-zinc-100 border-zinc-200",
 };
 
 export default function Dashboard() {
@@ -78,37 +78,37 @@ export default function Dashboard() {
 
       {/* Recent generations */}
       <div className="glass rounded-2xl overflow-hidden" data-testid="recent-generations">
-        <div className="px-6 py-4 flex items-center justify-between border-b border-white/5">
+        <div className="px-6 py-4 flex items-center justify-between border-b border-zinc-200">
           <h3 className="font-heading text-lg">Recent generations</h3>
-          <Link to="/saved-prompts" data-testid="see-saved-link" className="text-xs text-secondary hover:text-white inline-flex items-center gap-1">
+          <Link to="/saved-prompts" data-testid="see-saved-link" className="text-xs text-secondary hover:text-zinc-900 inline-flex items-center gap-1">
             Saved prompts <ArrowUpRight size={12} />
           </Link>
         </div>
         {loading ? (
           <div className="p-10 grid gap-3">
-            {[1,2,3].map(i => <div key={i} className="h-12 rounded-lg bg-white/5 animate-pulse" />)}
+            {[1,2,3].map(i => <div key={i} className="h-12 rounded-lg bg-zinc-100 animate-pulse" />)}
           </div>
         ) : gens.length === 0 ? (
           <div className="p-12 text-center" data-testid="empty-generations">
-            <div className="w-16 h-16 rounded-full bg-brand-gradient-soft border border-white/10 mx-auto flex items-center justify-center mb-4">
-              <Film size={24} className="text-violet-300" />
+            <div className="w-16 h-16 rounded-full bg-brand-gradient-soft border border-zinc-200 mx-auto flex items-center justify-center mb-4">
+              <Film size={24} className="text-violet-700" />
             </div>
             <p className="font-medium">No generations yet</p>
             <p className="text-secondary text-sm mt-1 mb-5">Upload your first video to see it here.</p>
             <Button onClick={() => navigate("/upload")} data-testid="empty-upload-btn" className="btn-gradient rounded-full px-5">Upload video</Button>
           </div>
         ) : (
-          <div className="divide-y divide-white/5">
+          <div className="divide-y divide-zinc-200">
             {gens.map((g) => (
               <button
                 key={g.generation_id}
                 onClick={() => navigate(`/generations/${g.generation_id}`)}
                 data-testid={`gen-row-${g.generation_id}`}
-                className="w-full flex items-center justify-between px-6 py-4 hover:bg-white/[0.03] transition-colors text-left"
+                className="w-full flex items-center justify-between px-6 py-4 hover:bg-zinc-50 transition-colors text-left"
               >
                 <div className="flex items-center gap-4 min-w-0">
-                  <div className="w-10 h-10 rounded-lg bg-brand-gradient-soft border border-white/10 flex items-center justify-center flex-shrink-0">
-                    <Film size={16} className="text-violet-300" />
+                  <div className="w-10 h-10 rounded-lg bg-brand-gradient-soft border border-zinc-200 flex items-center justify-center flex-shrink-0">
+                    <Film size={16} className="text-violet-700" />
                   </div>
                   <div className="min-w-0">
                     <p className="text-sm truncate">{(g.output?.summary || g.output?.shortPrompt || "Untitled prompt").slice(0, 80)}</p>

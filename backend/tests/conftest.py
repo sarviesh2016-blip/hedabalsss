@@ -27,6 +27,19 @@ MONGO_URL = os.environ["MONGO_URL"]
 DB_NAME = os.environ["DB_NAME"]
 
 
+@pytest.fixture(scope="session", autouse=True)
+def _reset_settings_baseline():
+    """Reset settings collection to a clean placeholder state at session start.
+    Required because admin PUT /integration-keys treats empty strings as no-op,
+    leaving any leaked test state in the DB across test runs."""
+    from pymongo import MongoClient
+    cli = MongoClient(MONGO_URL)
+    db = cli[DB_NAME]
+    db.settings.delete_many({"key": {"$in": ["integration_keys", "site_config"]}})
+    cli.close()
+    yield
+
+
 @pytest.fixture(scope="session")
 def base_url():
     return BASE_URL

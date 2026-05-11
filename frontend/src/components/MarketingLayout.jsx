@@ -18,7 +18,7 @@ export default function MarketingLayout({ children }) {
   return (
     <div className="min-h-screen relative">
       <div className="grain" />
-      <header className="fixed top-0 inset-x-0 z-50 glass-strong">
+      <header className="fixed top-0 inset-x-0 z-50 glass-strong border-b border-zinc-200">
         <div className="max-w-7xl mx-auto px-5 lg:px-8 h-16 flex items-center justify-between">
           <Logo className="h-8" />
           <nav className="hidden md:flex items-center gap-7">
@@ -28,7 +28,7 @@ export default function MarketingLayout({ children }) {
                 to={n.to}
                 data-testid={`nav-${n.label.toLowerCase()}`}
                 className={({ isActive }) =>
-                  `text-sm tracking-wide transition-colors ${isActive ? "text-white" : "text-secondary hover:text-white"}`
+                  `text-sm tracking-wide transition-colors ${isActive ? "text-zinc-900" : "text-secondary hover:text-zinc-900"}`
                 }
               >
                 {n.label}
@@ -36,22 +36,21 @@ export default function MarketingLayout({ children }) {
             ))}
           </nav>
           <div className="hidden md:flex items-center gap-3">
-            <Button variant="ghost" data-testid="header-login-btn" onClick={() => navigate("/login")} className="text-secondary hover:text-white hover:bg-white/5">
+            <Button variant="ghost" data-testid="header-login-btn" onClick={() => navigate("/login")} className="text-secondary hover:text-zinc-900 hover:bg-zinc-100">
               Sign in
             </Button>
             <Button data-testid="header-cta-btn" onClick={() => navigate("/login")} className="btn-gradient rounded-full px-5">
               Start free
             </Button>
           </div>
-          <button data-testid="mobile-menu-btn" className="md:hidden text-white" onClick={() => setOpen(!open)}>
+          <button data-testid="mobile-menu-btn" className="md:hidden text-zinc-900" onClick={() => setOpen(!open)}>
             {open ? <X size={22} /> : <Menu size={22} />}
           </button>
         </div>
         {open && (
-          <div className="md:hidden border-t border-white/5 bg-black/80 backdrop-blur-xl">
-            <div className="px-5 py-4 flex flex-col gap-3">
+          <div className="md:hidden border-t border-zinc-200 bg-white/95 backdrop-blur-xl">            <div className="px-5 py-4 flex flex-col gap-3">
               {navItems.map((n) => (
-                <Link key={n.to} to={n.to} className="text-sm text-secondary hover:text-white" onClick={() => setOpen(false)}>
+                <Link key={n.to} to={n.to} className="text-sm text-secondary hover:text-zinc-900" onClick={() => setOpen(false)}>
                   {n.label}
                 </Link>
               ))}
@@ -65,7 +64,7 @@ export default function MarketingLayout({ children }) {
 
       <main className="pt-16">{children}</main>
 
-      <footer className="border-t border-white/5 mt-24">
+      <footer className="border-t border-zinc-200 mt-24">
         <div className="max-w-7xl mx-auto px-5 lg:px-8 py-14 grid md:grid-cols-4 gap-10">
           <div>
             <Logo className="h-8" />
@@ -74,29 +73,29 @@ export default function MarketingLayout({ children }) {
             </p>
           </div>
           <div>
-            <p className="text-white text-sm font-medium mb-4">Product</p>
+            <p className="text-zinc-900 text-sm font-medium mb-4">Product</p>
             <ul className="space-y-2 text-sm text-secondary">
-              <li><Link to="/pricing" className="hover:text-white">Pricing</Link></li>
-              <li><Link to="/api-docs" className="hover:text-white">API</Link></li>
-              <li><Link to="/blog" className="hover:text-white">Blog</Link></li>
+              <li><Link to="/pricing" className="hover:text-zinc-900">Pricing</Link></li>
+              <li><Link to="/api-docs" className="hover:text-zinc-900">API</Link></li>
+              <li><Link to="/blog" className="hover:text-zinc-900">Blog</Link></li>
             </ul>
           </div>
           <div>
-            <p className="text-white text-sm font-medium mb-4">Company</p>
+            <p className="text-zinc-900 text-sm font-medium mb-4">Company</p>
             <ul className="space-y-2 text-sm text-secondary">
-              <li><Link to="/contact" className="hover:text-white">Contact</Link></li>
-              <li><Link to="/blog" className="hover:text-white">Stories</Link></li>
+              <li><Link to="/contact" className="hover:text-zinc-900">Contact</Link></li>
+              <li><Link to="/blog" className="hover:text-zinc-900">Stories</Link></li>
             </ul>
           </div>
           <div>
-            <p className="text-white text-sm font-medium mb-4">AI Models</p>
+            <p className="text-zinc-900 text-sm font-medium mb-4">AI Models</p>
             <ul className="space-y-2 text-sm text-secondary">
               <li>Veo · Sora · Kling</li>
               <li>Runway · Midjourney · Flux</li>
             </ul>
           </div>
         </div>
-        <div className="border-t border-white/5">
+        <div className="border-t border-zinc-200">
           <div className="max-w-7xl mx-auto px-5 lg:px-8 py-5 text-xs text-muted flex items-center justify-between">
             <span>© {new Date().getFullYear()} VideosToPrompt.com</span>
             <span>Made for creators · India</span>

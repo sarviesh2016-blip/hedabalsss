@@ -42,8 +42,8 @@ export default function Landing() {
     <MarketingLayout>
       {/* HERO */}
       <section className="relative overflow-hidden pt-20 lg:pt-28 pb-24" data-testid="hero-section">
-        <div className="absolute -top-32 left-1/2 -translate-x-1/2 w-[900px] h-[900px] rounded-full" style={{ background: "radial-gradient(closest-side, rgba(99,102,241,0.25), transparent)" }} />
-        <div className="absolute top-40 right-10 w-[400px] h-[400px] rounded-full bg-cyan-glow" />
+        <div className="absolute -top-32 left-1/2 -translate-x-1/2 w-[900px] h-[900px] rounded-full" style={{ background: "radial-gradient(closest-side, rgba(99,102,241,0.10), transparent)" }} />
+        <div className="absolute top-40 right-10 w-[400px] h-[400px] rounded-full" style={{ background: "radial-gradient(closest-side, rgba(6,182,212,0.10), transparent)" }} />
         <div className="relative max-w-7xl mx-auto px-5 lg:px-8">
           <div className="grid lg:grid-cols-[1.1fr_1fr] gap-14 items-center">
             <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
@@ -61,14 +61,14 @@ export default function Landing() {
                 <Button data-testid="hero-generate-btn" onClick={() => navigate("/login")} className="btn-gradient rounded-full px-7 h-12 text-sm font-medium">
                   Generate Prompt <ArrowRight size={16} className="ml-1" />
                 </Button>
-                <Button data-testid="hero-pricing-btn" onClick={() => navigate("/pricing")} variant="ghost" className="rounded-full px-7 h-12 text-sm bg-white/5 border border-white/10 hover:bg-white/10 text-white">
+                <Button data-testid="hero-pricing-btn" onClick={() => navigate("/pricing")} variant="ghost" className="rounded-full px-7 h-12 text-sm bg-zinc-100 border border-zinc-200 hover:bg-zinc-200 text-zinc-900">
                   View Pricing
                 </Button>
               </div>
               <div className="mt-10 flex items-center gap-6 text-xs text-muted">
-                <span className="flex items-center gap-2"><CheckCircle2 size={14} className="text-emerald-400" /> 2 free generations</span>
-                <span className="flex items-center gap-2"><CheckCircle2 size={14} className="text-emerald-400" /> No credit card</span>
-                <span className="flex items-center gap-2"><CheckCircle2 size={14} className="text-emerald-400" /> Export JSON</span>
+                <span className="flex items-center gap-2"><CheckCircle2 size={14} className="text-emerald-600" /> 2 free generations</span>
+                <span className="flex items-center gap-2"><CheckCircle2 size={14} className="text-emerald-600" /> No credit card</span>
+                <span className="flex items-center gap-2"><CheckCircle2 size={14} className="text-emerald-600" /> Export JSON</span>
               </div>
             </motion.div>
 
@@ -79,8 +79,8 @@ export default function Landing() {
                   <img src="https://images.pexels.com/photos/28122495/pexels-photo-28122495.jpeg" alt="cinematic" className="w-full h-full object-cover" />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
                   <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="w-16 h-16 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center ring-cyan-glow">
-                      <PlayCircle size={28} className="text-white" />
+                    <div className="w-16 h-16 rounded-full bg-zinc-200 backdrop-blur-md flex items-center justify-center ring-cyan-glow">
+                      <PlayCircle size={28} className="text-zinc-900" />
                     </div>
                   </div>
                   <div className="absolute top-3 left-3 chip text-[10px]">Live demo · 00:12</div>
@@ -88,12 +88,12 @@ export default function Landing() {
                 <div className="mt-4 space-y-3">
                   <div className="flex items-center gap-2">
                     <div className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
-                    <span className="text-xs text-cyan-300 font-mono">AI analyzing scenes…</span>
+                    <span className="text-xs text-cyan-700 font-mono">AI analyzing scenes…</span>
                   </div>
-                  <div className="font-mono text-xs leading-relaxed text-secondary bg-black/40 rounded-lg p-3 border border-white/5">
-                    <span className="text-violet-300">[00:00–00:03]</span> Slow dolly-in on a rain-soaked street, neon cyan rim,<br/>
+                  <div className="font-mono text-xs leading-relaxed text-secondary bg-zinc-100 rounded-lg p-3 border border-zinc-200">
+                    <span className="text-violet-700">[00:00–00:03]</span> Slow dolly-in on a rain-soaked street, neon cyan rim,<br/>
                     handheld 35mm, shallow DOF, atmospheric haze, teal-orange grade,<br/>
-                    <span className="text-cyan-300">--model veo · cinematic · 24fps</span>
+                    <span className="text-cyan-700">--model veo · cinematic · 24fps</span>
                   </div>
                   <div className="flex gap-2 flex-wrap">
                     {["Veo", "Sora", "Kling", "Runway", "Midjourney", "Flux"].map((m) => (
@@ -109,12 +109,12 @@ export default function Landing() {
       </section>
 
       {/* TRUSTED BY */}
-      <section className="border-y border-white/5 py-10 bg-black/30">
+      <section className="border-y border-zinc-200 py-10 bg-white/60">
         <div className="max-w-7xl mx-auto px-5 lg:px-8">
           <p className="text-center text-xs uppercase tracking-[0.3em] text-muted mb-6">Trusted by creators using</p>
           <div className="flex flex-wrap items-center justify-center gap-x-12 gap-y-4 text-sm font-mono text-secondary">
             {["VEO", "SORA", "KLING", "RUNWAY", "MIDJOURNEY", "FLUX", "STABLE DIFFUSION"].map((n) => (
-              <span key={n} className="hover:text-white transition-colors">{n}</span>
+              <span key={n} className="hover:text-zinc-900 transition-colors">{n}</span>
             ))}
           </div>
         </div>
@@ -135,11 +135,11 @@ export default function Landing() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ delay: i * 0.05, duration: 0.5 }}
-              className="glass rounded-2xl p-6 hover:bg-white/[0.05] transition-all"
+              className="glass rounded-2xl p-6 hover:bg-zinc-100 transition-all"
               data-testid={`feature-card-${i}`}
             >
-              <div className="w-10 h-10 rounded-lg bg-brand-gradient-soft border border-white/10 flex items-center justify-center mb-4">
-                <f.icon size={18} className="text-violet-300" />
+              <div className="w-10 h-10 rounded-lg bg-brand-gradient-soft border border-zinc-200 flex items-center justify-center mb-4">
+                <f.icon size={18} className="text-violet-700" />
               </div>
               <h3 className="text-lg font-medium">{f.title}</h3>
               <p className="text-secondary text-sm mt-2 leading-relaxed">{f.text}</p>
@@ -186,8 +186,8 @@ export default function Landing() {
                   { tc: "00:04–00:09", title: "Close-up subject", tags: ["handheld", "warm key"] },
                   { tc: "00:09–00:12", title: "Macro insert", tags: ["focus pull", "practical"] },
                 ].map((s, i) => (
-                  <div key={s.tc} className={`relative pl-5 py-3 ${i === 1 ? "border-l-2 border-cyan-400" : "border-l border-white/10"}`}>
-                    <p className="text-xs font-mono text-cyan-300">{s.tc}</p>
+                  <div key={s.tc} className={`relative pl-5 py-3 ${i === 1 ? "border-l-2 border-cyan-500" : "border-l border-zinc-200"}`}>
+                    <p className="text-xs font-mono text-cyan-700">{s.tc}</p>
                     <p className="text-sm mt-1">{s.title}</p>
                     <div className="flex gap-1.5 mt-2">
                       {s.tags.map((t) => <span key={t} className="chip text-[10px]">{t}</span>)}
@@ -198,17 +198,17 @@ export default function Landing() {
             </div>
             <div>
               <p className="text-xs uppercase tracking-widest text-muted mb-3">Model output (Sora)</p>
-              <div className="font-mono text-xs leading-relaxed text-secondary bg-black/50 rounded-xl p-5 border border-white/5 min-h-[260px]">
-                <span className="text-violet-300">// Sora · cinematic preset</span>{"\n"}
+              <div className="font-mono text-xs leading-relaxed text-secondary bg-zinc-100 rounded-xl p-5 border border-zinc-200 min-h-[260px]">
+                <span className="text-violet-700">// Sora · cinematic preset</span>{"\n"}
                 A rain-soaked Tokyo alley at 3 AM, slow dolly-in on a lone figure under a flickering neon sign,
                 shallow depth of field, anamorphic 35mm lens, atmospheric haze diffusing cyan and magenta neon,
                 practical lights reflecting in wet pavement, handheld micro-shake, teal-orange grade, 24fps,
                 cinematic motion blur, hyper-detailed textures on wet fabric and chrome surfaces.
               </div>
               <div className="flex flex-wrap gap-2 mt-4">
-                <Button size="sm" className="bg-white/5 border border-white/10 hover:bg-white/10 text-white rounded-full" data-testid="preview-copy-btn">Copy</Button>
-                <Button size="sm" className="bg-white/5 border border-white/10 hover:bg-white/10 text-white rounded-full" data-testid="preview-download-btn"><Download size={14} className="mr-1" /> TXT</Button>
-                <Button size="sm" className="bg-white/5 border border-white/10 hover:bg-white/10 text-white rounded-full" data-testid="preview-json-btn">JSON</Button>
+                <Button size="sm" className="bg-zinc-100 border border-zinc-200 hover:bg-zinc-200 text-zinc-900 rounded-full" data-testid="preview-copy-btn">Copy</Button>
+                <Button size="sm" className="bg-zinc-100 border border-zinc-200 hover:bg-zinc-200 text-zinc-900 rounded-full" data-testid="preview-download-btn"><Download size={14} className="mr-1" /> TXT</Button>
+                <Button size="sm" className="bg-zinc-100 border border-zinc-200 hover:bg-zinc-200 text-zinc-900 rounded-full" data-testid="preview-json-btn">JSON</Button>
               </div>
             </div>
           </div>
@@ -221,7 +221,7 @@ export default function Landing() {
           {TESTIMONIALS.map((t, i) => (
             <div key={t.name} className="glass rounded-2xl p-6" data-testid={`testimonial-${i}`}>
               <div className="flex gap-1 mb-3">
-                {[1,2,3,4,5].map(s => <Star key={s} size={14} className="fill-amber-300 text-amber-300" />)}
+                {[1,2,3,4,5].map(s => <Star key={s} size={14} className="fill-amber-500 text-amber-700" />)}
               </div>
               <p className="text-sm leading-relaxed">"{t.text}"</p>
               <div className="mt-5">

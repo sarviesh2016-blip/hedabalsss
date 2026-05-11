@@ -93,6 +93,7 @@ async def generate_prompt_from_video(
     selected_model: str,
     style_preset: str,
     session_id: str,
+    api_key: str | None = None,
 ) -> dict:
     """Run Gemini 3 Pro on the video and return structured prompt JSON."""
     # Write video to a temp file (FileContentWithMimeType requires file_path)
@@ -103,7 +104,7 @@ async def generate_prompt_from_video(
 
     try:
         chat = LlmChat(
-            api_key=EMERGENT_LLM_KEY,
+            api_key=api_key or EMERGENT_LLM_KEY,
             session_id=session_id,
             system_message=SYSTEM_PROMPT,
         ).with_model("gemini", "gemini-3.1-pro-preview")

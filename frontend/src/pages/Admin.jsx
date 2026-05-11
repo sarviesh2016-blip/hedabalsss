@@ -3,9 +3,10 @@ import DashboardLayout from "@/components/DashboardLayout";
 import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Users, IndianRupee, Film, AlertTriangle, KeyRound, Plus, Minus } from "lucide-react";
+import { Users, IndianRupee, Film, AlertTriangle, KeyRound, Plus, Minus, Globe, BarChart3, Search } from "lucide-react";
 import { toast } from "sonner";
 
 export default function Admin() {
@@ -14,36 +15,58 @@ export default function Admin() {
   const [payments, setPayments] = useState([]);
   const [gens, setGens] = useState([]);
   const [keys, setKeys] = useState({});
-  const [keysForm, setKeysForm] = useState({ razorpay_key_id: "", razorpay_key_secret: "", google_client_id: "" });
+  const [siteCfg, setSiteCfg] = useState({});
+  const [keysForm, setKeysForm] = useState({
+    razorpay_key_id: "", razorpay_key_secret: "",
+    google_client_id: "", google_client_secret: "",
+    gemini_api_key: "",
+  });
+  const [siteForm, setSiteForm] = useState({
+    ga_measurement_id: "", gtm_id: "", fb_pixel_id: "",
+    google_site_verification: "", bing_site_verification: "",
+    seo_default_title: "", seo_default_description: "", og_image_url: "",
+  });
   const [adjUser, setAdjUser] = useState(null);
   const [delta, setDelta] = useState(0);
 
   const loadAll = async () => {
-    const [s, u, p, g, k] = await Promise.all([
+    const [s, u, p, g, k, sc] = await Promise.all([
       api.get("/admin/stats"),
       api.get("/admin/users"),
       api.get("/admin/payments"),
       api.get("/admin/generations"),
       api.get("/admin/integration-keys"),
+      api.get("/admin/site-config"),
     ]);
-    setStats(s.data);
-    setUsers(u.data);
-    setPayments(p.data);
-    setGens(g.data);
-    setKeys(k.data);
+    setStats(s.data); setUsers(u.data); setPayments(p.data); setGens(g.data);
+    setKeys(k.data); setSiteCfg(sc.data || {});
   };
 
-  useEffect(() => { loadAll().catch(e => toast.error("Admin load failed")); }, []);
+  useEffect(() => { loadAll().catch(() => toast.error("Admin load failed")); }, []);
 
   const saveKeys = async () => {
     const payload = {};
     Object.entries(keysForm).forEach(([k, v]) => { if (v) payload[k] = v; });
+    if (Object.keys(payload).length === 0) { toast.message("Nothing to save"); return; }
     try {
       await api.put("/admin/integration-keys", payload);
       toast.success("Integration keys updated");
-      setKeysForm({ razorpay_key_id: "", razorpay_key_secret: "", google_client_id: "" });
+      setKeysForm({ razorpay_key_id: "", razorpay_key_secret: "", google_client_id: "", google_client_secret: "", gemini_api_key: "" });
       const k = await api.get("/admin/integration-keys");
       setKeys(k.data);
+    } catch { toast.error("Update failed"); }
+  };
+
+  const saveSiteCfg = async () => {
+    const payload = {};
+    Object.entries(siteForm).forEach(([k, v]) => { if (v) payload[k] = v; });
+    if (Object.keys(payload).length === 0) { toast.message("Nothing to save"); return; }
+    try {
+      await api.put("/admin/site-config", payload);
+      toast.success("Site config updated");
+      setSiteForm({ ga_measurement_id: "", gtm_id: "", fb_pixel_id: "", google_site_verification: "", bing_site_verification: "", seo_default_title: "", seo_default_description: "", og_image_url: "" });
+      const sc = await api.get("/admin/site-config");
+      setSiteCfg(sc.data || {});
     } catch { toast.error("Update failed"); }
   };
 
@@ -60,7 +83,7 @@ export default function Admin() {
   return (
     <DashboardLayout>
       <div className="mb-8">
-        <p className="text-xs uppercase tracking-widest text-cyan-300">Admin</p>
+        <p className="text-xs uppercase tracking-widest text-violet-700">Admin</p>
         <h1 className="text-3xl sm:text-4xl font-heading font-semibold mt-1">Control Room</h1>
       </div>
 
@@ -82,105 +105,134 @@ export default function Admin() {
       </div>
 
       <Tabs defaultValue="users">
-        <TabsList className="bg-white/5 p-1 rounded-lg">
-          <TabsTrigger value="users" data-testid="tab-users" className="data-[state=active]:bg-white/10 data-[state=active]:text-white text-secondary">Users</TabsTrigger>
-          <TabsTrigger value="payments" data-testid="tab-payments" className="data-[state=active]:bg-white/10 data-[state=active]:text-white text-secondary">Payments</TabsTrigger>
-          <TabsTrigger value="generations" data-testid="tab-gens" className="data-[state=active]:bg-white/10 data-[state=active]:text-white text-secondary">Generations</TabsTrigger>
-          <TabsTrigger value="integrations" data-testid="tab-integrations" className="data-[state=active]:bg-white/10 data-[state=active]:text-white text-secondary">Integrations</TabsTrigger>
+        <TabsList className="bg-zinc-100 p-1 rounded-lg flex flex-wrap h-auto">
+          <TabsTrigger value="users" data-testid="tab-users" className="data-[state=active]:bg-white data-[state=active]:text-zinc-900 data-[state=active]:shadow-sm text-secondary">Users</TabsTrigger>
+          <TabsTrigger value="payments" data-testid="tab-payments" className="data-[state=active]:bg-white data-[state=active]:text-zinc-900 data-[state=active]:shadow-sm text-secondary">Payments</TabsTrigger>
+          <TabsTrigger value="generations" data-testid="tab-gens" className="data-[state=active]:bg-white data-[state=active]:text-zinc-900 data-[state=active]:shadow-sm text-secondary">Generations</TabsTrigger>
+          <TabsTrigger value="integrations" data-testid="tab-integrations" className="data-[state=active]:bg-white data-[state=active]:text-zinc-900 data-[state=active]:shadow-sm text-secondary">Integrations</TabsTrigger>
+          <TabsTrigger value="analytics" data-testid="tab-analytics" className="data-[state=active]:bg-white data-[state=active]:text-zinc-900 data-[state=active]:shadow-sm text-secondary">Analytics &amp; SEO</TabsTrigger>
         </TabsList>
 
         <TabsContent value="users" className="mt-5">
-          <div className="glass rounded-2xl overflow-hidden">
-            <div className="grid grid-cols-[1fr_1fr_80px_80px_120px] px-5 py-3 text-xs uppercase tracking-widest text-muted border-b border-white/5">
-              <div>Name</div><div>Email</div><div>Plan</div><div>Credits</div><div></div>
-            </div>
-            <div className="divide-y divide-white/5 max-h-[500px] overflow-y-auto">
-              {users.map(u => (
-                <div key={u.user_id} className="grid grid-cols-[1fr_1fr_80px_80px_120px] px-5 py-3 items-center text-sm" data-testid={`admin-user-${u.user_id}`}>
-                  <div className="truncate">{u.name}{u.role === "admin" && <span className="ml-2 text-cyan-300 text-[10px]">ADMIN</span>}</div>
-                  <div className="truncate text-secondary">{u.email}</div>
-                  <div className="capitalize text-secondary">{u.plan}</div>
-                  <div className="font-mono">{u.credits}</div>
-                  <div>
-                    <Button onClick={() => { setAdjUser(u); setDelta(0); }} data-testid={`adjust-${u.user_id}`} size="sm" className="bg-white/5 border border-white/10 hover:bg-white/10 text-white rounded-full h-8 text-xs">Adjust</Button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
+          <DataTable
+            cols={["Name", "Email", "Plan", "Credits", ""]}
+            grid="grid-cols-[1fr_1fr_80px_80px_120px]"
+            rows={users.map(u => ({ key: u.user_id, cells: [
+              <span className="truncate">{u.name}{u.role === "admin" && <span className="ml-2 text-violet-700 text-[10px]">ADMIN</span>}</span>,
+              <span className="truncate text-secondary">{u.email}</span>,
+              <span className="capitalize text-secondary">{u.plan}</span>,
+              <span className="font-mono">{u.credits}</span>,
+              <Button onClick={() => { setAdjUser(u); setDelta(0); }} data-testid={`adjust-${u.user_id}`} size="sm" className="bg-zinc-100 border border-zinc-200 hover:bg-zinc-200 text-zinc-900 rounded-full h-8 text-xs">Adjust</Button>,
+            ], testid: `admin-user-${u.user_id}` }))}
+          />
         </TabsContent>
 
         <TabsContent value="payments" className="mt-5">
-          <div className="glass rounded-2xl overflow-hidden">
-            <div className="grid grid-cols-[1fr_1fr_100px_100px_120px] px-5 py-3 text-xs uppercase tracking-widest text-muted border-b border-white/5">
-              <div>Order</div><div>User</div><div>Type</div><div>Amount</div><div>Status</div>
-            </div>
-            <div className="divide-y divide-white/5 max-h-[500px] overflow-y-auto">
-              {payments.map(p => (
-                <div key={p.payment_id} className="grid grid-cols-[1fr_1fr_100px_100px_120px] px-5 py-3 items-center text-sm">
-                  <div className="font-mono text-xs truncate">{p.razorpay_order_id}</div>
-                  <div className="truncate text-secondary">{p.user_id}</div>
-                  <div className="text-secondary capitalize">{p.type}</div>
-                  <div className="font-mono">₹{(p.amount/100).toLocaleString()}</div>
-                  <div><span className={`text-[10px] uppercase ${p.status === "paid" ? "text-emerald-400" : p.status === "failed" ? "text-rose-400" : "text-amber-300"}`}>{p.status}</span></div>
-                </div>
-              ))}
-            </div>
-          </div>
+          <DataTable
+            cols={["Order", "User", "Type", "Amount", "Status"]}
+            grid="grid-cols-[1fr_1fr_100px_100px_120px]"
+            rows={payments.map(p => ({ key: p.payment_id, cells: [
+              <span className="font-mono text-xs truncate">{p.razorpay_order_id}</span>,
+              <span className="truncate text-secondary">{p.user_id}</span>,
+              <span className="text-secondary capitalize">{p.type}</span>,
+              <span className="font-mono">₹{(p.amount/100).toLocaleString()}</span>,
+              <StatusBadge s={p.status} />,
+            ] }))}
+          />
         </TabsContent>
 
         <TabsContent value="generations" className="mt-5">
-          <div className="glass rounded-2xl overflow-hidden">
-            <div className="grid grid-cols-[1fr_1fr_100px_100px_120px] px-5 py-3 text-xs uppercase tracking-widest text-muted border-b border-white/5">
-              <div>ID</div><div>User</div><div>Model</div><div>Style</div><div>Status</div>
-            </div>
-            <div className="divide-y divide-white/5 max-h-[500px] overflow-y-auto">
-              {gens.map(g => (
-                <div key={g.generation_id} className="grid grid-cols-[1fr_1fr_100px_100px_120px] px-5 py-3 items-center text-sm">
-                  <div className="font-mono text-xs truncate">{g.generation_id}</div>
-                  <div className="truncate text-secondary">{g.user_id}</div>
-                  <div className="uppercase">{g.selected_model}</div>
-                  <div className="text-secondary">{g.style_preset}</div>
-                  <div><span className="text-[10px] uppercase text-secondary">{g.status}</span></div>
-                </div>
-              ))}
-            </div>
-          </div>
+          <DataTable
+            cols={["ID", "User", "Model", "Style", "Status"]}
+            grid="grid-cols-[1fr_1fr_100px_100px_120px]"
+            rows={gens.map(g => ({ key: g.generation_id, cells: [
+              <span className="font-mono text-xs truncate">{g.generation_id}</span>,
+              <span className="truncate text-secondary">{g.user_id}</span>,
+              <span className="uppercase">{g.selected_model}</span>,
+              <span className="text-secondary">{g.style_preset}</span>,
+              <span className="text-[10px] uppercase text-secondary">{g.status}</span>,
+            ] }))}
+          />
         </TabsContent>
 
-        <TabsContent value="integrations" className="mt-5">
-          <div className="glass rounded-2xl p-6" data-testid="integrations-panel">
-            <div className="flex items-center gap-2 mb-1">
-              <KeyRound size={18} className="text-violet-300" />
-              <h3 className="text-lg font-heading">Integration keys</h3>
-            </div>
-            <p className="text-secondary text-sm mb-6">Override environment-level keys. Leave blank to keep current values.</p>
-
+        <TabsContent value="integrations" className="mt-5 space-y-6">
+          <Card icon={KeyRound} title="Integration keys" desc="Override .env-level keys. Leave blank to keep current values.">
             <div className="grid sm:grid-cols-2 gap-4">
               <Field label="Razorpay Key ID" current={keys.razorpay_key_id || "(not set)"} testid="key-rzp-id">
-                <Input value={keysForm.razorpay_key_id} onChange={(e) => setKeysForm({...keysForm, razorpay_key_id: e.target.value})} placeholder="rzp_live_xxx" className="bg-black/40 border-white/10 text-white" data-testid="input-rzp-id" />
+                <Input value={keysForm.razorpay_key_id} onChange={(e) => setKeysForm({...keysForm, razorpay_key_id: e.target.value})} placeholder="rzp_live_xxx" className="bg-white border-zinc-200" data-testid="input-rzp-id" />
               </Field>
               <Field label="Razorpay Key Secret" current={keys.razorpay_key_secret_masked || "(not set)"} testid="key-rzp-secret">
-                <Input type="password" value={keysForm.razorpay_key_secret} onChange={(e) => setKeysForm({...keysForm, razorpay_key_secret: e.target.value})} placeholder="••••••••" className="bg-black/40 border-white/10 text-white" data-testid="input-rzp-secret" />
+                <Input type="password" value={keysForm.razorpay_key_secret} onChange={(e) => setKeysForm({...keysForm, razorpay_key_secret: e.target.value})} placeholder="••••••••" className="bg-white border-zinc-200" data-testid="input-rzp-secret" />
               </Field>
-              <Field label="Google Client ID (display)" current={keys.google_client_id || "(not set)"} testid="key-google">
-                <Input value={keysForm.google_client_id} onChange={(e) => setKeysForm({...keysForm, google_client_id: e.target.value})} placeholder="xxx.apps.googleusercontent.com" className="bg-black/40 border-white/10 text-white" data-testid="input-google-id" />
+              <Field label="Google OAuth Client ID" current={keys.google_client_id || "(not set)"} testid="key-google-id">
+                <Input value={keysForm.google_client_id} onChange={(e) => setKeysForm({...keysForm, google_client_id: e.target.value})} placeholder="xxx.apps.googleusercontent.com" className="bg-white border-zinc-200" data-testid="input-google-id" />
+              </Field>
+              <Field label="Google OAuth Client Secret" current={keys.google_client_secret_masked || "(not set)"} testid="key-google-secret">
+                <Input type="password" value={keysForm.google_client_secret} onChange={(e) => setKeysForm({...keysForm, google_client_secret: e.target.value})} placeholder="GOCSPX-xxx" className="bg-white border-zinc-200" data-testid="input-google-secret" />
+              </Field>
+              <Field label="Gemini API Key (override)" current={keys.gemini_api_key_masked || "(using EMERGENT_LLM_KEY)"} testid="key-gemini">
+                <Input type="password" value={keysForm.gemini_api_key} onChange={(e) => setKeysForm({...keysForm, gemini_api_key: e.target.value})} placeholder="AIza... or sk-emergent-..." className="bg-white border-zinc-200" data-testid="input-gemini" />
               </Field>
             </div>
-            <Button onClick={saveKeys} data-testid="save-keys-btn" className="btn-gradient rounded-full mt-6">Save keys</Button>
-          </div>
+            <Button onClick={saveKeys} data-testid="save-keys-btn" className="btn-gradient rounded-full mt-6">Save integration keys</Button>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="analytics" className="mt-5 space-y-6">
+          <Card icon={BarChart3} title="Analytics" desc="Tracking IDs are injected into every page at load.">
+            <div className="grid sm:grid-cols-2 gap-4">
+              <Field label="Google Analytics 4 (GA4)" current={siteCfg.ga_measurement_id || "(not set)"} testid="cfg-ga">
+                <Input value={siteForm.ga_measurement_id} onChange={(e) => setSiteForm({...siteForm, ga_measurement_id: e.target.value})} placeholder="G-XXXXXXX" className="bg-white border-zinc-200" data-testid="input-ga" />
+              </Field>
+              <Field label="Google Tag Manager" current={siteCfg.gtm_id || "(not set)"} testid="cfg-gtm">
+                <Input value={siteForm.gtm_id} onChange={(e) => setSiteForm({...siteForm, gtm_id: e.target.value})} placeholder="GTM-XXXXXX" className="bg-white border-zinc-200" data-testid="input-gtm" />
+              </Field>
+              <Field label="Meta / Facebook Pixel" current={siteCfg.fb_pixel_id || "(not set)"} testid="cfg-fb">
+                <Input value={siteForm.fb_pixel_id} onChange={(e) => setSiteForm({...siteForm, fb_pixel_id: e.target.value})} placeholder="123456789012345" className="bg-white border-zinc-200" data-testid="input-fb" />
+              </Field>
+            </div>
+          </Card>
+
+          <Card icon={Search} title="Webmaster verification" desc="Verification meta tags injected into the document head.">
+            <div className="grid sm:grid-cols-2 gap-4">
+              <Field label="Google Search Console" current={siteCfg.google_site_verification || "(not set)"} testid="cfg-gsc">
+                <Input value={siteForm.google_site_verification} onChange={(e) => setSiteForm({...siteForm, google_site_verification: e.target.value})} placeholder="content value of meta tag" className="bg-white border-zinc-200" data-testid="input-gsc" />
+              </Field>
+              <Field label="Bing Webmaster" current={siteCfg.bing_site_verification || "(not set)"} testid="cfg-bing">
+                <Input value={siteForm.bing_site_verification} onChange={(e) => setSiteForm({...siteForm, bing_site_verification: e.target.value})} placeholder="content value of meta tag" className="bg-white border-zinc-200" data-testid="input-bing" />
+              </Field>
+            </div>
+          </Card>
+
+          <Card icon={Globe} title="SEO defaults" desc="Used for &lt;title&gt;, description, and Open Graph tags.">
+            <div className="grid sm:grid-cols-2 gap-4">
+              <Field label="Default page title" current={siteCfg.seo_default_title || "(not set)"} testid="cfg-title">
+                <Input value={siteForm.seo_default_title} onChange={(e) => setSiteForm({...siteForm, seo_default_title: e.target.value})} placeholder="VideosToPrompt — ..." className="bg-white border-zinc-200" data-testid="input-title" />
+              </Field>
+              <Field label="OG image URL" current={siteCfg.og_image_url || "(not set)"} testid="cfg-og">
+                <Input value={siteForm.og_image_url} onChange={(e) => setSiteForm({...siteForm, og_image_url: e.target.value})} placeholder="https://.../og.jpg" className="bg-white border-zinc-200" data-testid="input-og" />
+              </Field>
+              <div className="sm:col-span-2">
+                <Field label="Default meta description" current={siteCfg.seo_default_description || "(not set)"} testid="cfg-desc">
+                  <Textarea value={siteForm.seo_default_description} onChange={(e) => setSiteForm({...siteForm, seo_default_description: e.target.value})} rows={3} className="bg-white border-zinc-200" data-testid="input-desc" />
+                </Field>
+              </div>
+            </div>
+          </Card>
+
+          <Button onClick={saveSiteCfg} data-testid="save-site-cfg-btn" className="btn-gradient rounded-full">Save Analytics &amp; SEO</Button>
         </TabsContent>
       </Tabs>
 
       <Dialog open={!!adjUser} onOpenChange={(v) => { if (!v) setAdjUser(null); }}>
-        <DialogContent className="bg-[#0a0a0c] border-white/10 text-white">
+        <DialogContent className="bg-white border-zinc-200 text-zinc-900">
           <DialogHeader><DialogTitle>Adjust credits — {adjUser?.name}</DialogTitle></DialogHeader>
           <div className="space-y-3">
             <p className="text-secondary text-sm">Current: <span className="font-mono">{adjUser?.credits}</span>. Use negative numbers to subtract.</p>
             <div className="flex gap-2">
-              <Button onClick={() => setDelta(Number(delta) - 10)} className="bg-white/5 border border-white/10 hover:bg-white/10 text-white"><Minus size={14}/>10</Button>
-              <Input type="number" value={delta} onChange={(e) => setDelta(e.target.value)} data-testid="delta-input" className="bg-black/40 border-white/10 text-white" />
-              <Button onClick={() => setDelta(Number(delta) + 10)} className="bg-white/5 border border-white/10 hover:bg-white/10 text-white"><Plus size={14}/>10</Button>
+              <Button onClick={() => setDelta(Number(delta) - 10)} className="bg-zinc-100 border border-zinc-200 hover:bg-zinc-200 text-zinc-900"><Minus size={14}/>10</Button>
+              <Input type="number" value={delta} onChange={(e) => setDelta(e.target.value)} data-testid="delta-input" className="bg-white border-zinc-200" />
+              <Button onClick={() => setDelta(Number(delta) + 10)} className="bg-zinc-100 border border-zinc-200 hover:bg-zinc-200 text-zinc-900"><Plus size={14}/>10</Button>
             </div>
             <Button onClick={adjustCredits} data-testid="confirm-adjust" className="btn-gradient w-full rounded-full">Apply</Button>
           </div>
@@ -190,12 +242,53 @@ export default function Admin() {
   );
 }
 
+function Card({ icon: Icon, title, desc, children }) {
+  return (
+    <div className="glass rounded-2xl p-6">
+      <div className="flex items-center gap-2 mb-1">
+        <Icon size={18} className="text-violet-700" />
+        <h3 className="text-lg font-heading">{title}</h3>
+      </div>
+      <p className="text-secondary text-sm mb-6">{desc}</p>
+      {children}
+    </div>
+  );
+}
+
 function Field({ label, current, children, testid }) {
   return (
     <div data-testid={testid}>
       <p className="text-xs uppercase tracking-widest text-muted mb-2">{label}</p>
-      <p className="text-xs font-mono text-secondary mb-2">Current: {current}</p>
+      <p className="text-xs font-mono text-secondary mb-2 truncate">Current: {current}</p>
       {children}
+    </div>
+  );
+}
+
+function StatusBadge({ s }) {
+  const map = {
+    paid: "text-emerald-600", failed: "text-rose-600",
+    created: "text-amber-700", processing: "text-cyan-700",
+    completed: "text-emerald-600", queued: "text-amber-700",
+  };
+  return <span className={`text-[10px] uppercase ${map[s] || "text-secondary"}`}>{s}</span>;
+}
+
+function DataTable({ cols, grid, rows }) {
+  return (
+    <div className="glass rounded-2xl overflow-hidden">
+      <div className={`grid ${grid} px-5 py-3 text-xs uppercase tracking-widest text-muted border-b border-zinc-200`}>
+        {cols.map((c, i) => <div key={i}>{c}</div>)}
+      </div>
+      <div className="divide-y divide-zinc-200 max-h-[500px] overflow-y-auto">
+        {rows.length === 0 ? (
+          <div className="px-5 py-10 text-center text-secondary text-sm">No data</div>
+        ) : rows.map(r => (
+          <div key={r.key} data-testid={r.testid} className={`grid ${grid} px-5 py-3 items-center text-sm`}>
+            {r.cells.map((c, i) => <div key={i}>{c}</div>)}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

@@ -65,7 +65,7 @@ export default function UploadPage() {
         selected_model: model,
         style_preset: style,
       });
-      toast.success("Prompt generated!");
+      toast.success("Generation queued — analyzing now");
       navigate(`/generations/${gen.generation_id}`);
     } catch (e) {
       console.error(e);
@@ -97,8 +97,8 @@ export default function UploadPage() {
               onDrop={onDrop}
               className={`block rounded-3xl p-12 sm:p-16 text-center cursor-pointer transition-all ${
                 dragOver
-                  ? "bg-violet-500/10 ring-2 ring-violet-500/40"
-                  : "bg-white/[0.02] hover:bg-white/[0.04] border-2 border-dashed border-white/15 hover:border-violet-400/50"
+                  ? "bg-violet-50 ring-2 ring-violet-300"
+                  : "bg-zinc-50 hover:bg-zinc-100 border-2 border-dashed border-zinc-300 hover:border-violet-400/50"
               }`}
             >
               <input
@@ -109,8 +109,8 @@ export default function UploadPage() {
                 data-testid="file-input"
                 onChange={(e) => handleFile(e.target.files?.[0])}
               />
-              <div className="w-16 h-16 rounded-2xl bg-brand-gradient-soft border border-white/10 mx-auto flex items-center justify-center mb-5">
-                <UploadIcon size={26} className="text-violet-300" />
+              <div className="w-16 h-16 rounded-2xl bg-brand-gradient-soft border border-zinc-200 mx-auto flex items-center justify-center mb-5">
+                <UploadIcon size={26} className="text-violet-700" />
               </div>
               <p className="text-lg font-heading font-medium">Drop your video here</p>
               <p className="text-secondary text-sm mt-2">MP4, MOV or WEBM · up to 100MB</p>
@@ -125,13 +125,13 @@ export default function UploadPage() {
               </div>
               <div className="flex items-center justify-between mt-4">
                 <div className="flex items-center gap-3 min-w-0">
-                  <Film size={16} className="text-violet-300" />
+                  <Film size={16} className="text-violet-700" />
                   <div className="min-w-0">
                     <p className="text-sm truncate" data-testid="file-name">{file.name}</p>
                     <p className="text-xs text-muted">{(file.size / 1024 / 1024).toFixed(1)} MB</p>
                   </div>
                 </div>
-                <button onClick={clear} data-testid="clear-btn" className="text-secondary hover:text-white p-2">
+                <button onClick={clear} data-testid="clear-btn" className="text-secondary hover:text-zinc-900 p-2">
                   <X size={16} />
                 </button>
               </div>
@@ -144,10 +144,10 @@ export default function UploadPage() {
           <div>
             <p className="text-xs uppercase tracking-widest text-muted mb-2">Target model</p>
             <Select value={model} onValueChange={setModel}>
-              <SelectTrigger data-testid="model-select" className="bg-black/40 border-white/10 text-white">
+              <SelectTrigger data-testid="model-select" className="bg-zinc-100 border-zinc-200 text-zinc-900">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent className="bg-[#0a0a0c] border-white/10 text-white">
+              <SelectContent className="bg-white border-zinc-200 text-zinc-900">
                 {MODELS.map(m => <SelectItem key={m} value={m} data-testid={`model-opt-${m}`}>{m.toUpperCase()}</SelectItem>)}
               </SelectContent>
             </Select>
@@ -155,17 +155,17 @@ export default function UploadPage() {
           <div>
             <p className="text-xs uppercase tracking-widest text-muted mb-2">Style preset</p>
             <Select value={style} onValueChange={setStyle}>
-              <SelectTrigger data-testid="style-select" className="bg-black/40 border-white/10 text-white">
+              <SelectTrigger data-testid="style-select" className="bg-zinc-100 border-zinc-200 text-zinc-900">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent className="bg-[#0a0a0c] border-white/10 text-white">
+              <SelectContent className="bg-white border-zinc-200 text-zinc-900">
                 {STYLES.map(s => <SelectItem key={s} value={s} data-testid={`style-opt-${s}`}>{s}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
 
-          <div className="pt-2 text-xs text-muted bg-black/40 rounded-xl p-3 border border-white/5">
-            <p>Each generation uses <span className="text-cyan-300 font-mono">1 credit</span>. Larger videos may take longer to analyze.</p>
+          <div className="pt-2 text-xs text-muted bg-zinc-100 rounded-xl p-3 border border-zinc-200">
+            <p>Each generation uses <span className="text-cyan-700 font-mono">1 credit</span>. Larger videos may take longer to analyze.</p>
           </div>
 
           <Button
@@ -177,7 +177,7 @@ export default function UploadPage() {
             {uploading ? "Uploading…" : generating ? "Analyzing with Gemini 3 Pro…" : (<><Sparkles size={16} className="mr-2" /> Generate Prompt</>)}
           </Button>
           {busy && (
-            <div className="w-full h-1 rounded-full bg-white/5 overflow-hidden">
+            <div className="w-full h-1 rounded-full bg-zinc-100 overflow-hidden">
               <div className="h-full bg-brand-gradient animate-shimmer" style={{ backgroundSize: "200% 100%" }} />
             </div>
           )}

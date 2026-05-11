@@ -19,14 +19,14 @@ export default function Blog() {
 
         <div className="grid md:grid-cols-2 gap-5 mt-12">
           {POSTS.map((p, i) => (
-            <article key={i} data-testid={`blog-post-${i}`} className="glass rounded-2xl p-6 hover:bg-white/[0.05] transition-all cursor-pointer">
+            <article key={i} data-testid={`blog-post-${i}`} className="glass rounded-2xl p-6 hover:bg-zinc-100 transition-all cursor-pointer">
               <div className="flex items-center justify-between mb-3">
                 <span className="chip">{p.tag}</span>
                 <span className="text-xs text-muted">{p.date}</span>
               </div>
               <h2 className="text-xl font-heading font-medium leading-snug">{p.title}</h2>
               <p className="text-secondary text-sm mt-3 leading-relaxed">{p.excerpt}</p>
-              <div className="mt-4 text-sm text-cyan-300 flex items-center gap-1 hover:gap-2 transition-all">Read more <ArrowUpRight size={14} /></div>
+              <div className="mt-4 text-sm text-cyan-700 flex items-center gap-1 hover:gap-2 transition-all">Read more <ArrowUpRight size={14} /></div>
             </article>
           ))}
         </div>

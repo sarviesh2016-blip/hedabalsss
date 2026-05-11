@@ -188,6 +188,19 @@ class IntegrationKeysUpdate(BaseModel):
     razorpay_key_id: Optional[str] = None
     razorpay_key_secret: Optional[str] = None
     google_client_id: Optional[str] = None
+    google_client_secret: Optional[str] = None
+    gemini_api_key: Optional[str] = None
+
+
+class SiteConfigUpdate(BaseModel):
+    ga_measurement_id: Optional[str] = None
+    gtm_id: Optional[str] = None
+    fb_pixel_id: Optional[str] = None
+    google_site_verification: Optional[str] = None
+    bing_site_verification: Optional[str] = None
+    seo_default_title: Optional[str] = None
+    seo_default_description: Optional[str] = None
+    og_image_url: Optional[str] = None
 
 
 class CreateAPIKeyRequest(BaseModel):

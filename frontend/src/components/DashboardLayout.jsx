@@ -46,8 +46,8 @@ export default function DashboardLayout({ children }) {
             className={({ isActive }) =>
               `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all mb-1 ${
                 isActive
-                  ? "bg-white/[0.06] text-white border border-white/10"
-                  : "text-secondary hover:text-white hover:bg-white/[0.04]"
+                  ? "bg-zinc-100 text-zinc-900 border border-zinc-200"
+                  : "text-secondary hover:text-zinc-900 hover:bg-zinc-100"
               }`
             }
           >
@@ -63,8 +63,8 @@ export default function DashboardLayout({ children }) {
             className={({ isActive }) =>
               `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all mb-1 ${
                 isActive
-                  ? "bg-white/[0.06] text-cyan-300 border border-cyan-400/20"
-                  : "text-secondary hover:text-white hover:bg-white/[0.04]"
+                  ? "bg-zinc-100 text-cyan-700 border border-cyan-300"
+                  : "text-secondary hover:text-zinc-900 hover:bg-zinc-100"
               }`
             }
           >
@@ -73,7 +73,7 @@ export default function DashboardLayout({ children }) {
           </NavLink>
         )}
       </nav>
-      <div className="p-4 border-t border-white/5">
+      <div className="p-4 border-t border-zinc-200">
         <div className="flex items-center gap-3 px-2 py-2">
           <div className="w-8 h-8 rounded-full bg-brand-gradient flex items-center justify-center text-xs font-semibold">
             {user?.name?.[0]?.toUpperCase() || "U"}
@@ -82,7 +82,7 @@ export default function DashboardLayout({ children }) {
             <p className="text-sm truncate">{user?.name}</p>
             <p className="text-xs text-muted truncate">{user?.email}</p>
           </div>
-          <button data-testid="logout-btn" onClick={async () => { await logout(); navigate("/"); }} className="text-secondary hover:text-white">
+          <button data-testid="logout-btn" onClick={async () => { await logout(); navigate("/"); }} className="text-secondary hover:text-zinc-900">
             <LogOut size={16} />
           </button>
         </div>
@@ -93,23 +93,23 @@ export default function DashboardLayout({ children }) {
   return (
     <div className="min-h-screen flex">
       {/* Sidebar - desktop */}
-      <aside className="hidden lg:flex flex-col w-64 bg-[#09090B] border-r border-white/5 fixed inset-y-0 left-0 z-40">
+      <aside className="hidden lg:flex flex-col w-64 bg-white border-r border-zinc-200 fixed inset-y-0 left-0 z-40">
         {sidebarBody}
       </aside>
 
       {/* Sidebar - mobile drawer */}
       {open && (
         <div className="lg:hidden fixed inset-0 z-50">
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setOpen(false)} />
-          <aside className="absolute left-0 top-0 bottom-0 w-72 bg-[#09090B] border-r border-white/5 flex flex-col">
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setOpen(false)} />
+          <aside className="absolute left-0 top-0 bottom-0 w-72 bg-white border-r border-zinc-200 flex flex-col">
             {sidebarBody}
           </aside>
         </div>
       )}
 
       <div className="flex-1 lg:ml-64">
-        <header className="lg:hidden glass-strong sticky top-0 z-30 h-14 flex items-center justify-between px-4 border-b border-white/5">
-          <button data-testid="dashboard-menu-btn" onClick={() => setOpen(true)} className="text-white">
+        <header className="lg:hidden glass-strong sticky top-0 z-30 h-14 flex items-center justify-between px-4 border-b border-zinc-200">
+          <button data-testid="dashboard-menu-btn" onClick={() => setOpen(true)} className="text-zinc-900">
             <Menu size={20} />
           </button>
           <Logo className="h-6" to="/dashboard" />

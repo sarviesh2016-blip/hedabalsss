@@ -1,4 +1,4 @@
-"""Prompt generation endpoints."""
+"""Prompt generation endpoints with credit-refund-on-failure + async background processing."""
 import asyncio
 import uuid
 import logging
@@ -11,17 +11,76 @@ from auth_utils import get_current_user
 from models import GenerateRequest, PromptOutput
 from storage_service import get_object
 from ai_service import generate_prompt_from_video, fallback_mock_output
+from runtime_config import get_gemini_key
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["generations"])
 
-# Stay well within the K8s ingress 60s window so the fallback mock is always returned
-AI_TIMEOUT_SECONDS = 40
+AI_TIMEOUT_SECONDS = 50  # leave room before client gives up at ~60s polling
+
+
+async def _process_generation(gen_id: str, video: dict, selected_model: str, style_preset: str, user_id: str):
+    """Run the AI in the background; refund credit on failure."""
+    try:
+        gemini_key = await get_gemini_key()
+        data, ct = get_object(video["storage_path"])
+        ext = video["file_name"].rsplit(".", 1)[-1].lower() if "." in video["file_name"] else "mp4"
+        output = await asyncio.wait_for(
+            generate_prompt_from_video(
+                video_bytes=data,
+                content_type=video.get("content_type") or ct or "video/mp4",
+                file_ext=ext,
+                selected_model=selected_model,
+                style_preset=style_preset,
+                session_id=gen_id,
+                api_key=gemini_key,
+            ),
+            timeout=AI_TIMEOUT_SECONDS,
+        )
+        status = "completed"
+        error = None
+        used_fallback = False
+    except asyncio.TimeoutError:
+        logger.warning(f"AI timeout for {gen_id}; using fallback")
+        output = fallback_mock_output(video["file_name"], style_preset, selected_model)
+        status = "completed"
+        error = "ai_timeout_fallback"
+        used_fallback = True
+    except Exception as e:
+        logger.exception(f"AI failed for {gen_id}; using fallback")
+        output = fallback_mock_output(video["file_name"], style_preset, selected_model)
+        status = "completed"
+        error = f"ai_fallback: {str(e)[:300]}"
+        used_fallback = True
+
+    completed_at = datetime.now(timezone.utc).isoformat()
+    await generations_col.update_one(
+        {"generation_id": gen_id},
+        {"$set": {
+            "output": output,
+            "status": status,
+            "error": error,
+            "completed_at": completed_at,
+            "used_fallback": used_fallback,
+            "credits_used": 0 if used_fallback else 1,
+        }},
+    )
+    await videos_col.update_one(
+        {"video_id": video["video_id"]},
+        {"$set": {"status": "completed"}},
+    )
+
+    # Refund credit if we fell back to mock
+    if used_fallback:
+        await users_col.update_one(
+            {"user_id": user_id},
+            {"$inc": {"credits": 1}, "$set": {"updated_at": completed_at}},
+        )
+        logger.info(f"Refunded 1 credit to {user_id} for fallback generation {gen_id}")
 
 
 @router.post("/generate-prompt")
 async def generate_prompt(req: GenerateRequest, user=Depends(get_current_user)):
-    # Credit check
     if user.get("credits", 0) <= 0:
         raise HTTPException(status_code=402, detail="Insufficient credits. Please upgrade or purchase a credit pack.")
 
@@ -32,7 +91,7 @@ async def generate_prompt(req: GenerateRequest, user=Depends(get_current_user)):
     gen_id = f"gen_{uuid.uuid4().hex[:14]}"
     now = datetime.now(timezone.utc).isoformat()
 
-    # Reserve credit immediately (atomic decrement)
+    # Reserve credit atomically
     res = await users_col.update_one(
         {"user_id": user["user_id"], "credits": {"$gt": 0}},
         {"$inc": {"credits": -1}, "$set": {"updated_at": now}},
@@ -49,6 +108,7 @@ async def generate_prompt(req: GenerateRequest, user=Depends(get_current_user)):
         "output": PromptOutput().model_dump(),
         "status": "processing",
         "credits_used": 1,
+        "used_fallback": False,
         "error": None,
         "created_at": now,
         "completed_at": None,
@@ -56,48 +116,13 @@ async def generate_prompt(req: GenerateRequest, user=Depends(get_current_user)):
     await generations_col.insert_one(gen_doc.copy())
     await videos_col.update_one({"video_id": req.video_id}, {"$set": {"status": "processing"}})
 
-    # Run AI (with a hard timeout so we never exceed the ingress window)
-    try:
-        data, ct = get_object(video["storage_path"])
-        ext = video["file_name"].rsplit(".", 1)[-1].lower() if "." in video["file_name"] else "mp4"
-        output = await asyncio.wait_for(
-            generate_prompt_from_video(
-                video_bytes=data,
-                content_type=video.get("content_type") or ct or "video/mp4",
-                file_ext=ext,
-                selected_model=req.selected_model,
-                style_preset=req.style_preset,
-                session_id=gen_id,
-            ),
-            timeout=AI_TIMEOUT_SECONDS,
-        )
-        status = "completed"
-        error = None
-    except asyncio.TimeoutError:
-        logger.warning("AI generation timed out; using fallback")
-        output = fallback_mock_output(video["file_name"], req.style_preset, req.selected_model)
-        status = "completed"
-        error = "ai_timeout_fallback"
-    except Exception as e:
-        logger.exception("AI generation failed; using fallback")
-        output = fallback_mock_output(video["file_name"], req.style_preset, req.selected_model)
-        status = "completed"
-        error = f"ai_fallback: {e}"
+    # Run AI in background — client polls /generations/{id} until status=='completed'
+    asyncio.create_task(_process_generation(
+        gen_id, video, req.selected_model, req.style_preset, user["user_id"]
+    ))
 
-    completed_at = datetime.now(timezone.utc).isoformat()
-    await generations_col.update_one(
-        {"generation_id": gen_id},
-        {"$set": {
-            "output": output,
-            "status": status,
-            "error": error,
-            "completed_at": completed_at,
-        }},
-    )
-    await videos_col.update_one({"video_id": req.video_id}, {"$set": {"status": "completed"}})
-
-    doc = await generations_col.find_one({"generation_id": gen_id}, PROJ)
-    return doc
+    gen_doc.pop("_id", None)
+    return gen_doc
 
 
 @router.get("/generations")
@@ -120,7 +145,8 @@ async def get_generation(generation_id: str, user=Depends(get_current_user)):
 
 @router.get("/user/credits")
 async def get_credits(user=Depends(get_current_user)):
+    fresh = await users_col.find_one({"user_id": user["user_id"]}, PROJ)
     return {
-        "credits": user.get("credits", 0),
-        "plan": user.get("plan", "free"),
+        "credits": fresh.get("credits", 0) if fresh else 0,
+        "plan": fresh.get("plan", "free") if fresh else "free",
     }

@@ -91,7 +91,7 @@ export default function Billing() {
     }
   };
 
-  if (loading) return <DashboardLayout><div className="space-y-4">{[1,2,3].map(i => <div key={i} className="h-32 rounded-2xl bg-white/5 animate-pulse" />)}</div></DashboardLayout>;
+  if (loading) return <DashboardLayout><div className="space-y-4">{[1,2,3].map(i => <div key={i} className="h-32 rounded-2xl bg-zinc-100 animate-pulse" />)}</div></DashboardLayout>;
 
   const subs = data.plans.filter(p => p.type === "subscription");
   const packs = data.plans.filter(p => p.type === "credits");
@@ -110,7 +110,7 @@ export default function Billing() {
           <p className="text-secondary text-sm mt-1">{user?.credits} credits available</p>
         </div>
         {!data.configured && (
-          <div className="flex items-center gap-2 text-amber-300 text-xs bg-amber-400/10 border border-amber-400/20 px-3 py-2 rounded-full">
+          <div className="flex items-center gap-2 text-amber-700 text-xs bg-amber-50 border border-amber-200 px-3 py-2 rounded-full">
             <AlertCircle size={14} /> Razorpay in test mode — payments simulated
           </div>
         )}
@@ -146,7 +146,7 @@ export default function Billing() {
               data-testid={`buy-btn-${p.id}`}
               disabled={buying === p.id}
               onClick={() => purchase(p.id)}
-              className="w-full mt-5 rounded-full h-10 bg-white/5 border border-white/10 hover:bg-white/10 text-white disabled:opacity-50"
+              className="w-full mt-5 rounded-full h-10 bg-zinc-100 border border-zinc-200 hover:bg-zinc-200 text-zinc-900 disabled:opacity-50"
             >
               {buying === p.id ? "Processing…" : "Buy pack"}
             </Button>
@@ -159,7 +159,7 @@ export default function Billing() {
         {history.length === 0 ? (
           <div className="p-10 text-center text-secondary text-sm">No payments yet.</div>
         ) : (
-          <div className="divide-y divide-white/5">
+          <div className="divide-y divide-zinc-200">
             {history.map(p => (
               <div key={p.payment_id} className="px-5 py-4 flex items-center justify-between">
                 <div>
@@ -168,7 +168,7 @@ export default function Billing() {
                 </div>
                 <div className="text-right">
                   <p className="text-sm font-medium">₹{(p.amount / 100).toLocaleString()}</p>
-                  <span className={`text-[10px] uppercase tracking-wider ${p.status === "paid" ? "text-emerald-400" : p.status === "failed" ? "text-rose-400" : "text-amber-300"}`}>{p.status}</span>
+                  <span className={`text-[10px] uppercase tracking-wider ${p.status === "paid" ? "text-emerald-600" : p.status === "failed" ? "text-rose-600" : "text-amber-700"}`}>{p.status}</span>
                 </div>
               </div>
             ))}

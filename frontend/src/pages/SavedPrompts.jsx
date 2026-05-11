@@ -45,11 +45,11 @@ export default function SavedPrompts() {
       </div>
 
       {loading ? (
-        <div className="grid sm:grid-cols-2 gap-4">{[1,2,3,4].map(i => <div key={i} className="h-40 rounded-2xl bg-white/5 animate-pulse" />)}</div>
+        <div className="grid sm:grid-cols-2 gap-4">{[1,2,3,4].map(i => <div key={i} className="h-40 rounded-2xl bg-zinc-100 animate-pulse" />)}</div>
       ) : items.length === 0 ? (
         <div className="glass rounded-3xl p-14 text-center" data-testid="empty-saved">
-          <div className="w-16 h-16 rounded-2xl bg-brand-gradient-soft border border-white/10 mx-auto flex items-center justify-center mb-4">
-            <Bookmark size={22} className="text-violet-300" />
+          <div className="w-16 h-16 rounded-2xl bg-brand-gradient-soft border border-zinc-200 mx-auto flex items-center justify-center mb-4">
+            <Bookmark size={22} className="text-violet-700" />
           </div>
           <p className="font-medium">No saved prompts yet</p>
           <p className="text-secondary text-sm mt-1">Save a generation to access it here anytime.</p>
@@ -60,17 +60,17 @@ export default function SavedPrompts() {
             <div key={s.saved_id} className="glass rounded-2xl p-5 flex flex-col" data-testid={`saved-${s.saved_id}`}>
               <div className="flex items-start justify-between gap-3 mb-3">
                 <h3 className="font-medium leading-snug flex-1">{s.title}</h3>
-                <button onClick={() => remove(s.saved_id)} data-testid={`delete-saved-${s.saved_id}`} className="text-secondary hover:text-rose-400">
+                <button onClick={() => remove(s.saved_id)} data-testid={`delete-saved-${s.saved_id}`} className="text-secondary hover:text-rose-600">
                   <Trash2 size={14} />
                 </button>
               </div>
               <p className="text-xs text-muted mb-3">{new Date(s.created_at).toLocaleDateString()}</p>
               <p className="font-mono text-xs text-secondary leading-relaxed line-clamp-5 flex-1">{s.snippet}</p>
-              <div className="mt-4 pt-4 border-t border-white/5 flex gap-2">
-                <Button size="sm" onClick={() => copy(s.output?.shortPrompt || s.snippet)} data-testid={`copy-saved-${s.saved_id}`} className="bg-white/5 border border-white/10 hover:bg-white/10 text-white rounded-full text-xs">
+              <div className="mt-4 pt-4 border-t border-zinc-200 flex gap-2">
+                <Button size="sm" onClick={() => copy(s.output?.shortPrompt || s.snippet)} data-testid={`copy-saved-${s.saved_id}`} className="bg-zinc-100 border border-zinc-200 hover:bg-zinc-200 text-zinc-900 rounded-full text-xs">
                   <Copy size={12} className="mr-1" /> Copy short
                 </Button>
-                <Button size="sm" onClick={() => copy(s.output?.detailedPrompt || "")} data-testid={`copy-detailed-${s.saved_id}`} className="bg-white/5 border border-white/10 hover:bg-white/10 text-white rounded-full text-xs">
+                <Button size="sm" onClick={() => copy(s.output?.detailedPrompt || "")} data-testid={`copy-detailed-${s.saved_id}`} className="bg-zinc-100 border border-zinc-200 hover:bg-zinc-200 text-zinc-900 rounded-full text-xs">
                   Detailed
                 </Button>
               </div>
