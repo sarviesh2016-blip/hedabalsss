@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Users, IndianRupee, Film, AlertTriangle, KeyRound, Plus, Minus, Globe, BarChart3, Search } from "lucide-react";
+import { Users, IndianRupee, Film, AlertTriangle, KeyRound, Plus, Minus, Globe, BarChart3, Search, Mail } from "lucide-react";
 import { toast } from "sonner";
 
 export default function Admin() {
@@ -14,6 +14,7 @@ export default function Admin() {
   const [users, setUsers] = useState([]);
   const [payments, setPayments] = useState([]);
   const [gens, setGens] = useState([]);
+  const [messages, setMessages] = useState([]);
   const [keys, setKeys] = useState({});
   const [siteCfg, setSiteCfg] = useState({});
   const [keysForm, setKeysForm] = useState({
@@ -30,16 +31,17 @@ export default function Admin() {
   const [delta, setDelta] = useState(0);
 
   const loadAll = async () => {
-    const [s, u, p, g, k, sc] = await Promise.all([
+    const [s, u, p, g, k, sc, m] = await Promise.all([
       api.get("/admin/stats"),
       api.get("/admin/users"),
       api.get("/admin/payments"),
       api.get("/admin/generations"),
       api.get("/admin/integration-keys"),
       api.get("/admin/site-config"),
+      api.get("/admin/contact-messages"),
     ]);
     setStats(s.data); setUsers(u.data); setPayments(p.data); setGens(g.data);
-    setKeys(k.data); setSiteCfg(sc.data || {});
+    setKeys(k.data); setSiteCfg(sc.data || {}); setMessages(m.data || []);
   };
 
   useEffect(() => { loadAll().catch(() => toast.error("Admin load failed")); }, []);
@@ -111,6 +113,7 @@ export default function Admin() {
           <TabsTrigger value="generations" data-testid="tab-gens" className="data-[state=active]:bg-white data-[state=active]:text-zinc-900 data-[state=active]:shadow-sm text-secondary">Generations</TabsTrigger>
           <TabsTrigger value="integrations" data-testid="tab-integrations" className="data-[state=active]:bg-white data-[state=active]:text-zinc-900 data-[state=active]:shadow-sm text-secondary">Integrations</TabsTrigger>
           <TabsTrigger value="analytics" data-testid="tab-analytics" className="data-[state=active]:bg-white data-[state=active]:text-zinc-900 data-[state=active]:shadow-sm text-secondary">Analytics &amp; SEO</TabsTrigger>
+          <TabsTrigger value="messages" data-testid="tab-messages" className="data-[state=active]:bg-white data-[state=active]:text-zinc-900 data-[state=active]:shadow-sm text-secondary">Messages</TabsTrigger>
         </TabsList>
 
         <TabsContent value="users" className="mt-5">
@@ -153,6 +156,35 @@ export default function Admin() {
               <span className="text-[10px] uppercase text-secondary">{g.status}</span>,
             ] }))}
           />
+        </TabsContent>
+
+        <TabsContent value="messages" className="mt-5">
+          {messages.length === 0 ? (
+            <div className="glass rounded-2xl p-10 text-center" data-testid="messages-empty">
+              <Mail className="mx-auto mb-3 text-violet-700" size={28} />
+              <p className="text-secondary text-sm">No contact messages yet.</p>
+            </div>
+          ) : (
+            <div className="space-y-3" data-testid="messages-list">
+              {messages.map(m => (
+                <div key={m.message_id || m.created_at} className="glass rounded-2xl p-5" data-testid={`msg-${m.message_id || m.created_at}`}>
+                  <div className="flex items-start justify-between gap-4 mb-2">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-medium text-zinc-900 truncate">{m.name || "Anonymous"}</span>
+                        <span className="text-xs text-secondary truncate">&lt;{m.email}&gt;</span>
+                      </div>
+                      <p className="text-sm font-medium text-zinc-800 mt-1 truncate">{m.subject || "(no subject)"}</p>
+                    </div>
+                    <span className="text-[11px] text-muted whitespace-nowrap">
+                      {m.created_at ? new Date(m.created_at).toLocaleString() : ""}
+                    </span>
+                  </div>
+                  <p className="text-sm text-secondary whitespace-pre-wrap break-words">{m.message}</p>
+                </div>
+              ))}
+            </div>
+          )}
         </TabsContent>
 
         <TabsContent value="integrations" className="mt-5 space-y-6">
