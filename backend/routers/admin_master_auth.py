@@ -120,9 +120,14 @@ def _record_failure(key: str):
 
 @router.post("/login")
 async def master_login(req: MasterLoginRequest, request: Request, response: Response):
-    ip = (request.client.host if request.client else "?")
-    key = f"{ip}:{req.username}"
+    # Real client IP (X-Forwarded-For left-most) — used for logs only.
+    fwd = request.headers.get("x-forwarded-for", "")
+    real_ip = fwd.split(",")[0].strip() if fwd else (request.client.host if request.client else "?")
+    # Single master account → use a global per-username counter so attackers can't
+    # bypass the limit by rotating IPs (k8s ingress hides the real IP anyway).
+    key = req.username
     if _is_locked_out(key):
+        logger.warning(f"master-login lockout hit for {req.username} (ip={real_ip})")
         raise HTTPException(status_code=429, detail="Too many attempts. Try again in 15 minutes.")
 
     doc = await settings_col.find_one({"key": "master_admin"})
