@@ -29,9 +29,10 @@ export default function AuthCallback() {
         });
         if (data.session_token) localStorage.setItem("session_token", data.session_token);
         setUser(data.user);
-        // Clean URL and route to dashboard
-        window.history.replaceState(null, "", "/dashboard");
-        navigate("/dashboard", { state: { user: data.user }, replace: true });
+        // Clean URL and hard-redirect — avoids the setUser/navigate race
+        const target = data.user?.role === "admin" ? "/admin" : "/dashboard";
+        window.history.replaceState(null, "", target);
+        window.location.replace(target);
       } catch (e) {
         console.error(e);
         toast.error("Sign-in failed. Please try again.");

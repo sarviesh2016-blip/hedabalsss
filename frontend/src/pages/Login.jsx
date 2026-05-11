@@ -43,7 +43,8 @@ export default function Login() {
             if (data.session_token) localStorage.setItem("session_token", data.session_token);
             setUser(data.user);
             toast.success("Signed in");
-            navigate("/dashboard", { state: { user: data.user }, replace: true });
+            // Hard redirect avoids the setUser/navigate race
+            window.location.replace(data.user?.role === "admin" ? "/admin" : "/dashboard");
           } catch (e) {
             console.error(e);
             toast.error(e?.response?.data?.detail || "Google sign-in failed");

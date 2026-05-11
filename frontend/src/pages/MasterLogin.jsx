@@ -23,7 +23,9 @@ export default function MasterLogin() {
       if (data.session_token) localStorage.setItem("session_token", data.session_token);
       setUser(data.user);
       toast.success("Signed in as Master Admin");
-      navigate("/admin", { replace: true });
+      // Hard redirect — guarantees AuthContext re-initialises with the new session
+      // before ProtectedRoute runs (avoids the setUser/navigate race).
+      window.location.replace("/admin");
     } catch (err) {
       const detail = err?.response?.data?.detail;
       toast.error(typeof detail === "string" ? detail : "Login failed");
