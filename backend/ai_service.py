@@ -1,8 +1,14 @@
-"""AI prompt generation service using Gemini 3 Pro via emergentintegrations."""
+"""AI prompt generation service.
+
+Two paths:
+  • Real Gemini API key (`AIza…`) → call Google's `google-genai` SDK directly.
+  • Anything else (Emergent universal key)    → route via emergentintegrations.
+"""
 import os
 import json
 import logging
 import tempfile
+import asyncio
 from typing import Optional
 
 from emergentintegrations.llm.chat import LlmChat, UserMessage, FileContentWithMimeType
@@ -10,6 +16,9 @@ from emergentintegrations.llm.chat import LlmChat, UserMessage, FileContentWithM
 logger = logging.getLogger(__name__)
 
 EMERGENT_LLM_KEY = os.environ.get("EMERGENT_LLM_KEY")
+
+GEMINI_MODEL_DIRECT = "gemini-2.5-pro"  # current latest on the standard Gemini API
+GEMINI_MODEL_EMERGENT = "gemini-3.1-pro-preview"
 
 
 SYSTEM_PROMPT = """You are VideosToPrompt's elite cinematic AI prompt engineer.
@@ -52,39 +61,140 @@ Return ONLY valid JSON. No backticks, no commentary."""
 
 def _empty_output() -> dict:
     return {
-        "summary": "",
-        "shortPrompt": "",
-        "detailedPrompt": "",
+        "summary": "", "shortPrompt": "", "detailedPrompt": "",
         "sceneBreakdown": [],
-        "modelPrompts": {
-            "veo": "", "sora": "", "kling": "",
-            "runway": "", "midjourney": "", "flux": "",
-        },
-        "cameraDetails": "",
-        "lightingDetails": "",
-        "mood": "",
-        "characters": "",
-        "objects": "",
-        "transcription": "",
+        "modelPrompts": {"veo":"","sora":"","kling":"","runway":"","midjourney":"","flux":""},
+        "cameraDetails": "", "lightingDetails": "", "mood": "",
+        "characters": "", "objects": "", "transcription": "",
     }
 
 
 def _coerce_json(text: str) -> dict:
-    """Best-effort JSON extraction from model output."""
-    text = text.strip()
-    # Strip code fences if present
+    text = (text or "").strip()
     if text.startswith("```"):
         text = text.strip("`")
         if text.lower().startswith("json"):
             text = text[4:]
         text = text.strip()
-    # Find first { and last }
-    start = text.find("{")
-    end = text.rfind("}")
+    start = text.find("{"); end = text.rfind("}")
     if start != -1 and end != -1 and end > start:
         text = text[start:end + 1]
     return json.loads(text)
 
+
+def _normalise(data: dict) -> dict:
+    out = _empty_output()
+    out.update({k: v for k, v in data.items() if k in out})
+    mp = out.get("modelPrompts") or {}
+    defaults = {"veo":"","sora":"","kling":"","runway":"","midjourney":"","flux":""}
+    defaults.update({k: v for k, v in mp.items() if k in defaults and isinstance(v, str)})
+    out["modelPrompts"] = defaults
+    cleaned = []
+    for s in out.get("sceneBreakdown") or []:
+        if not isinstance(s, dict): continue
+        cleaned.append({
+            "timecode": str(s.get("timecode","")),
+            "scene": str(s.get("scene","")),
+            "cameraMove": str(s.get("cameraMove","")),
+            "lighting": str(s.get("lighting","")),
+            "actions": str(s.get("actions","")),
+            "prompt": str(s.get("prompt","")),
+        })
+    out["sceneBreakdown"] = cleaned
+    return out
+
+
+# ---------- Direct Google Gemini path (real AIza... key) ----------
+
+def _run_direct_gemini(video_bytes: bytes, content_type: str, file_ext: str,
+                       selected_model: str, style_preset: str, api_key: str) -> dict:
+    """Use google-genai SDK directly with the user's real Gemini API key."""
+    from google import genai
+    from google.genai import types as gtypes
+
+    client = genai.Client(api_key=api_key)
+
+    suffix = f".{file_ext}" if file_ext else ".mp4"
+    with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
+        tmp.write(video_bytes)
+        tmp_path = tmp.name
+
+    user_text = (
+        f"Analyze this video and produce the JSON prompt object.\n"
+        f"STYLE_PRESET: {style_preset}\n"
+        f"PRIMARY_TARGET_MODEL: {selected_model}\n"
+        f"Return ONLY the JSON object."
+    )
+
+    try:
+        # 1) Upload video as a managed file
+        uploaded = client.files.upload(file=tmp_path)
+        # 2) Poll until ACTIVE (videos need a moment to be processed)
+        import time
+        deadline = time.time() + 45
+        while getattr(uploaded.state, "name", str(uploaded.state)) in ("PROCESSING", "STATE_PROCESSING") and time.time() < deadline:
+            time.sleep(2)
+            uploaded = client.files.get(name=uploaded.name)
+        # 3) Generate
+        response = client.models.generate_content(
+            model=GEMINI_MODEL_DIRECT,
+            contents=[uploaded, user_text],
+            config=gtypes.GenerateContentConfig(
+                system_instruction=SYSTEM_PROMPT,
+                response_mime_type="application/json",
+                temperature=0.6,
+            ),
+        )
+        raw = getattr(response, "text", None) or ""
+        if not raw:
+            # Sometimes text is on a candidate
+            try:
+                raw = response.candidates[0].content.parts[0].text or ""
+            except Exception:
+                raw = ""
+        data = _coerce_json(raw)
+        return _normalise(data)
+    finally:
+        try: os.unlink(tmp_path)
+        except Exception: pass
+
+
+# ---------- Emergent universal key path ----------
+
+def _run_emergent(video_bytes: bytes, content_type: str, file_ext: str,
+                  selected_model: str, style_preset: str, session_id: str, api_key: str) -> dict:
+    suffix = f".{file_ext}" if file_ext else ".mp4"
+    with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
+        tmp.write(video_bytes)
+        tmp_path = tmp.name
+    try:
+        chat = LlmChat(
+            api_key=api_key,
+            session_id=session_id,
+            system_message=SYSTEM_PROMPT,
+        ).with_model("gemini", GEMINI_MODEL_EMERGENT)
+
+        video_file = FileContentWithMimeType(
+            file_path=tmp_path,
+            mime_type=content_type or "video/mp4",
+        )
+        user_text = (
+            f"Analyze this video and produce the JSON prompt object.\n"
+            f"STYLE_PRESET: {style_preset}\n"
+            f"PRIMARY_TARGET_MODEL: {selected_model}\n"
+            f"Return ONLY the JSON object."
+        )
+        msg = UserMessage(text=user_text, file_contents=[video_file])
+        response = asyncio.new_event_loop().run_until_complete(chat.send_message(msg))
+        raw = response.text if hasattr(response, "text") else str(response)
+        data = _coerce_json(raw)
+        return _normalise(data)
+    finally:
+        try: os.unlink(tmp_path)
+        except Exception: pass
+
+
+# ---------- Public coroutine ----------
 
 async def generate_prompt_from_video(
     video_bytes: bytes,
@@ -93,90 +203,30 @@ async def generate_prompt_from_video(
     selected_model: str,
     style_preset: str,
     session_id: str,
-    api_key: str | None = None,
+    api_key: Optional[str] = None,
 ) -> dict:
-    """Run Gemini 3 Pro on the video and return structured prompt JSON.
-    The send_message call inside emergentintegrations is synchronous internally —
-    we run the whole pipeline in a worker thread so the asyncio event loop
-    stays responsive for other requests (e.g. polling)."""
-    import asyncio
+    """Run Gemini on the video and return structured prompt JSON.
+
+    Routes to the official Google SDK if a real AIza... key is supplied,
+    otherwise to emergentintegrations. Whole pipeline runs in a worker thread."""
+    key = api_key or EMERGENT_LLM_KEY or ""
+    use_direct = key.startswith("AIza")
+    if use_direct:
+        logger.info("AI: using DIRECT Gemini SDK (real key)")
+        return await asyncio.to_thread(
+            _run_direct_gemini,
+            video_bytes, content_type, file_ext,
+            selected_model, style_preset, key,
+        )
+    logger.info("AI: using Emergent universal-key path")
     return await asyncio.to_thread(
-        _run_sync,
+        _run_emergent,
         video_bytes, content_type, file_ext,
-        selected_model, style_preset, session_id, api_key,
+        selected_model, style_preset, session_id, key,
     )
 
 
-def _run_sync(video_bytes, content_type, file_ext, selected_model, style_preset, session_id, api_key):
-    import asyncio as _asyncio
-    suffix = f".{file_ext}" if file_ext else ".mp4"
-    with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
-        tmp.write(video_bytes)
-        tmp_path = tmp.name
-    try:
-        chat = LlmChat(
-            api_key=api_key or EMERGENT_LLM_KEY,
-            session_id=session_id,
-            system_message=SYSTEM_PROMPT,
-        ).with_model("gemini", "gemini-3.1-pro-preview")
-
-        video_file = FileContentWithMimeType(
-            file_path=tmp_path,
-            mime_type=content_type or "video/mp4",
-        )
-
-        user_text = (
-            f"Analyze this video and produce the JSON prompt object.\n"
-            f"STYLE_PRESET: {style_preset}\n"
-            f"PRIMARY_TARGET_MODEL: {selected_model}\n"
-            f"Return ONLY the JSON object."
-        )
-
-        msg = UserMessage(text=user_text, file_contents=[video_file])
-        # send_message is async but its internals call sync litellm.completion;
-        # since we are already running in a worker thread (asyncio.to_thread),
-        # drive the coroutine with a private event loop.
-        response = _asyncio.new_event_loop().run_until_complete(chat.send_message(msg))
-
-        # response may be a string or have .text
-        if hasattr(response, "text"):
-            raw = response.text
-        else:
-            raw = str(response)
-
-        data = _coerce_json(raw)
-        # Merge with defaults to ensure schema completeness
-        out = _empty_output()
-        out.update({k: v for k, v in data.items() if k in out})
-        # Ensure modelPrompts is a dict with all keys
-        mp = out.get("modelPrompts") or {}
-        defaults = {"veo": "", "sora": "", "kling": "", "runway": "", "midjourney": "", "flux": ""}
-        defaults.update({k: v for k, v in mp.items() if k in defaults and isinstance(v, str)})
-        out["modelPrompts"] = defaults
-        # Validate sceneBreakdown items
-        cleaned_scenes = []
-        for s in out.get("sceneBreakdown") or []:
-            if not isinstance(s, dict):
-                continue
-            cleaned_scenes.append({
-                "timecode": str(s.get("timecode", "")),
-                "scene": str(s.get("scene", "")),
-                "cameraMove": str(s.get("cameraMove", "")),
-                "lighting": str(s.get("lighting", "")),
-                "actions": str(s.get("actions", "")),
-                "prompt": str(s.get("prompt", "")),
-            })
-        out["sceneBreakdown"] = cleaned_scenes
-        return out
-    finally:
-        try:
-            os.unlink(tmp_path)
-        except Exception:
-            pass
-
-
 def fallback_mock_output(file_name: str, style_preset: str, selected_model: str) -> dict:
-    """Used when video analysis fails — keeps user flow functional."""
     out = _empty_output()
     out["summary"] = (
         f"A {style_preset} short clip titled '{file_name}'. The footage features dynamic "
@@ -193,17 +243,17 @@ def fallback_mock_output(file_name: str, style_preset: str, selected_model: str)
         "cinematic composition, shot on ARRI Alexa, 24fps"
     )
     out["sceneBreakdown"] = [
-        {"timecode": "00:00-00:03", "scene": "Establishing wide shot",
-         "cameraMove": "slow dolly-in", "lighting": "soft rim light, cool ambient",
-         "actions": "subject enters frame",
+        {"timecode":"00:00-00:03","scene":"Establishing wide shot",
+         "cameraMove":"slow dolly-in","lighting":"soft rim light, cool ambient",
+         "actions":"subject enters frame",
          "prompt": f"{style_preset} establishing shot, slow dolly-in"},
-        {"timecode": "00:03-00:08", "scene": "Mid close-up of subject",
-         "cameraMove": "handheld follow", "lighting": "warm key, cyan fill",
-         "actions": "subject moves through environment",
+        {"timecode":"00:03-00:08","scene":"Mid close-up of subject",
+         "cameraMove":"handheld follow","lighting":"warm key, cyan fill",
+         "actions":"subject moves through environment",
          "prompt": f"{style_preset} mid close-up, handheld follow"},
-        {"timecode": "00:08-00:12", "scene": "Detail insert shot",
-         "cameraMove": "macro static", "lighting": "hard practical light",
-         "actions": "focus pull on object",
+        {"timecode":"00:08-00:12","scene":"Detail insert shot",
+         "cameraMove":"macro static","lighting":"hard practical light",
+         "actions":"focus pull on object",
          "prompt": f"{style_preset} macro insert with focus pull"},
     ]
     base = out["detailedPrompt"]

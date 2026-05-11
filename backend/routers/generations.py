@@ -44,13 +44,22 @@ async def _process_generation(gen_id: str, video: dict, selected_model: str, sty
         logger.warning(f"AI timeout for {gen_id}; using fallback")
         output = fallback_mock_output(video["file_name"], style_preset, selected_model)
         status = "completed"
-        error = "ai_timeout_fallback"
+        error = "AI timed out — using cinematic mock. Try a shorter clip."
         used_fallback = True
     except Exception as e:
         logger.exception(f"AI failed for {gen_id}; using fallback")
         output = fallback_mock_output(video["file_name"], style_preset, selected_model)
         status = "completed"
-        error = f"ai_fallback: {str(e)[:300]}"
+        msg = str(e)
+        if "RESOURCE_EXHAUSTED" in msg or "429" in msg or "quota" in msg.lower():
+            error = ("Gemini quota exceeded on this key — using cinematic mock. "
+                     "Enable billing for your Gemini API project at https://ai.google.dev "
+                     "or paste a different key in Admin → Integrations.")
+        elif "API_KEY_INVALID" in msg or "401" in msg or "permission" in msg.lower():
+            error = ("Gemini key is invalid or lacks permission — using cinematic mock. "
+                     "Check the key in Admin → Integrations.")
+        else:
+            error = f"AI failed ({type(e).__name__}); using cinematic mock."
         used_fallback = True
 
     completed_at = datetime.now(timezone.utc).isoformat()

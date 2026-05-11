@@ -115,6 +115,13 @@ export default function PromptResult() {
             )}
           </div>
           <h1 className="text-3xl sm:text-4xl font-heading font-semibold max-w-3xl">{out.summary || (gen.status === "processing" ? "Analyzing your video…" : "Generated prompt")}</h1>
+          {gen.used_fallback && gen.error && (
+            <div className="mt-4 max-w-3xl rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900" data-testid="ai-fallback-notice">
+              <p className="font-medium">Cinematic mock returned</p>
+              <p className="text-amber-800 mt-1 leading-relaxed">{gen.error}</p>
+              <p className="text-amber-700 text-xs mt-2">Your credit has been refunded.</p>
+            </div>
+          )}
         </div>
         <div className="flex flex-wrap gap-2">
           <Button data-testid="save-btn" onClick={() => setSaveOpen(true)} className="bg-zinc-100 border border-zinc-200 hover:bg-zinc-200 text-zinc-900 rounded-full">
