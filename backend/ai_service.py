@@ -95,13 +95,24 @@ async def generate_prompt_from_video(
     session_id: str,
     api_key: str | None = None,
 ) -> dict:
-    """Run Gemini 3 Pro on the video and return structured prompt JSON."""
-    # Write video to a temp file (FileContentWithMimeType requires file_path)
+    """Run Gemini 3 Pro on the video and return structured prompt JSON.
+    The send_message call inside emergentintegrations is synchronous internally —
+    we run the whole pipeline in a worker thread so the asyncio event loop
+    stays responsive for other requests (e.g. polling)."""
+    import asyncio
+    return await asyncio.to_thread(
+        _run_sync,
+        video_bytes, content_type, file_ext,
+        selected_model, style_preset, session_id, api_key,
+    )
+
+
+def _run_sync(video_bytes, content_type, file_ext, selected_model, style_preset, session_id, api_key):
+    import asyncio as _asyncio
     suffix = f".{file_ext}" if file_ext else ".mp4"
     with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
         tmp.write(video_bytes)
         tmp_path = tmp.name
-
     try:
         chat = LlmChat(
             api_key=api_key or EMERGENT_LLM_KEY,
@@ -122,7 +133,10 @@ async def generate_prompt_from_video(
         )
 
         msg = UserMessage(text=user_text, file_contents=[video_file])
-        response = await chat.send_message(msg)
+        # send_message is async but its internals call sync litellm.completion;
+        # since we are already running in a worker thread (asyncio.to_thread),
+        # drive the coroutine with a private event loop.
+        response = _asyncio.new_event_loop().run_until_complete(chat.send_message(msg))
 
         # response may be a string or have .text
         if hasattr(response, "text"):

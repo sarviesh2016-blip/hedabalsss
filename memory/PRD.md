@@ -27,25 +27,43 @@ with Google login, Razorpay payments, credit system, dashboard, admin controls, 
 - Copy / TXT / JSON export of prompts; per-AI-model prompt tabs; scene timeline view
 
 ## What's been implemented (Feb 11, 2026)
+
+### Iteration 1 — MVP
 - **Backend** (all under `/api`):
-  - `/auth/session`, `/auth/me`, `/auth/logout` (Emergent Google flow, custom user_id, cookie+Bearer)
-  - `/upload/video`, `/videos`, `/videos/{id}`, `/videos/{id}/stream` (Emergent object storage, MIME validation, 100MB cap)
-  - `/generate-prompt` (Gemini 3 Pro w/ 40s timeout + structured fallback mock; atomic credit decrement)
-  - `/generations`, `/generations/{id}`, `/user/credits`
-  - `/save-prompt`, `/saved-prompts`, DELETE `/saved-prompts/{id}`
-  - `/payments/plans`, `/create-order`, `/verify` (placeholder-safe), `/history`, `/webhooks/razorpay`
-  - `/api-keys/create` (full key shown once), list, delete (with key_hash storage)
-  - `/admin/stats`, `/users`, `/payments`, `/generations`, `/credits/adjust`, `/integration-keys` (GET/PUT, masked secret), `/logs`
-  - `/contact` (public)
-- **Frontend pages**: Landing (hero, features, workflow, prompt preview, testimonials, FAQ),
-  Pricing (4 tiers + 3 packs), Login (Google), Dashboard (stats + recent gens), Upload (drag-and-drop),
-  PromptResult (timeline + per-model tabs + copy/TXT/JSON), SavedPrompts, Billing (Razorpay checkout flow,
-  history), ApiDocs (key management + curl snippet), Blog, Contact, Admin (4 tabs).
-- **Design**: dark cinematic theme, glassmorphism cards, brand-gradient + cyan glow accents,
-  Outfit/Manrope/JetBrains Mono fonts, framer-motion entrance animations.
-- **Testing**: 27/34 backend pytest tests passing; the `/generate-prompt` timeout issue
-  was fixed by wrapping the AI call with `asyncio.wait_for(..., timeout=40)` + structured
-  fallback. Live curl test now returns a complete structured prompt in ~6s.
+  - `/auth/session`, `/auth/me`, `/auth/logout` (Emergent Google flow)
+  - `/upload/video`, `/videos`, `/videos/{id}`, `/videos/{id}/stream` (Emergent storage, MIME validation, 100MB cap)
+  - `/generate-prompt`, `/generations`, `/generations/{id}`, `/user/credits`
+  - `/save-prompt`, `/saved-prompts`
+  - `/payments/plans`, `/create-order`, `/verify`, `/history`, `/webhooks/razorpay`
+  - `/api-keys/*`, `/admin/*`, `/contact`
+- **Frontend**: 13 pages (dark theme initially)
+
+### Iteration 2 — Feb 11, 2026 (light theme + extended admin)
+- **Light theme**: full re-skin to a clean light SaaS aesthetic (off-white #fafafa, controlled
+  purple-blue brand gradient accents, glass cards on white). All pages updated; text contrast verified.
+- **Credit refund on AI fallback**: `_process_generation` marks `used_fallback=True` and
+  increments user credits by +1 when the AI errors → user is never charged for a mock.
+- **ffprobe duration + thumbnail extraction**: `video_utils.py` runs `ffprobe` and `ffmpeg`
+  on upload; thumbnail saved to object storage; `GET /api/videos/{id}/thumbnail` serves it.
+- **Async background generation**: POST `/generate-prompt` returns immediately with
+  `status='processing'`; AI runs in `asyncio.to_thread` (so polling stays responsive);
+  frontend `PromptResult` polls every 2s until completion.
+- **Own-managed Google OAuth** (separate from Emergent Auth):
+  - Admin → Integrations → Google OAuth Client ID/Secret
+  - POST `/api/auth/google-own/verify { credential }` verifies the id_token JWT against the configured client_id and creates a session
+  - Login page renders the Google Identity Services button automatically when client_id is configured
+- **Admin → Integrations** extended:
+  - Razorpay Key ID + Secret (already existed)
+  - Google OAuth Client ID + Secret (new)
+  - Gemini API Key override (new — falls back to `EMERGENT_LLM_KEY`)
+- **Admin → Analytics & SEO** (new tab):
+  - GA4 Measurement ID, Google Tag Manager ID, Meta/Facebook Pixel ID
+  - Google Search Console & Bing Webmaster verification meta tags
+  - Default page title, meta description, OG image URL
+- **SiteConfigProvider** on frontend fetches `GET /api/site-config` and injects:
+  GA4/GTM/Pixel scripts, verification `<meta>` tags, default title + Open Graph meta tags.
+- **Favicon**: brand logo set as `<link rel="icon">` + Apple touch icon.
+- **Testing**: 42/42 pytest tests pass.
 
 ## Known limitations / next backlog
 **P0**
