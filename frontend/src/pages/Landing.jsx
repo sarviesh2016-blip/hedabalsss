@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import MarketingLayout from "@/components/MarketingLayout";
 import CreateTicketDialog from "@/components/CreateTicketDialog";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import {
   Sparkles, Wand2, Film, Camera, Lightbulb, Clapperboard,
@@ -41,6 +42,9 @@ const FAQS = [
 export default function Landing() {
   const navigate = useNavigate();
   const [ticketOpen, setTicketOpen] = useState(false);
+  const { user } = useAuth();
+  const ctaTarget = user ? (user.role === "admin" ? "/admin" : "/upload") : "/login";
+  const ctaLabel = user ? "Generate Prompt" : "Generate Prompt";
   return (
     <MarketingLayout>
       {/* HERO */}
@@ -61,8 +65,8 @@ export default function Landing() {
                 lighting details, and export-ready prompts for the top AI tools.
               </p>
               <div className="flex flex-wrap items-center gap-3 mt-9">
-                <Button data-testid="hero-generate-btn" onClick={() => navigate("/login")} className="btn-gradient rounded-full px-7 h-12 text-sm font-medium">
-                  Generate Prompt <ArrowRight size={16} className="ml-1" />
+                <Button data-testid="hero-generate-btn" onClick={() => navigate(ctaTarget)} className="btn-gradient rounded-full px-7 h-12 text-sm font-medium">
+                  {ctaLabel} <ArrowRight size={16} className="ml-1" />
                 </Button>
                 <Button data-testid="hero-pricing-btn" onClick={() => navigate("/pricing")} variant="ghost" className="rounded-full px-7 h-12 text-sm bg-zinc-100 border border-zinc-200 hover:bg-zinc-200 text-zinc-900">
                   View Pricing
