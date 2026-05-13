@@ -1,11 +1,13 @@
-import React from "react";
+import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import MarketingLayout from "@/components/MarketingLayout";
+import CreateTicketDialog from "@/components/CreateTicketDialog";
 import { Button } from "@/components/ui/button";
 import {
   Sparkles, Wand2, Film, Camera, Lightbulb, Clapperboard,
-  ArrowRight, Zap, Code2, Download, PlayCircle, CheckCircle2, Star
+  ArrowRight, Zap, Code2, Download, PlayCircle, CheckCircle2, Star,
+  LifeBuoy
 } from "lucide-react";
 
 const FEATURES = [
@@ -38,6 +40,7 @@ const FAQS = [
 
 export default function Landing() {
   const navigate = useNavigate();
+  const [ticketOpen, setTicketOpen] = useState(false);
   return (
     <MarketingLayout>
       {/* HERO */}
@@ -257,6 +260,28 @@ export default function Landing() {
           ))}
         </div>
       </section>
+
+      {/* SUPPORT TICKET CTA */}
+      <section className="pb-24 max-w-3xl mx-auto px-5 lg:px-8" data-testid="support-cta-section">
+        <div className="glass-strong rounded-3xl p-8 lg:p-10 text-center">
+          <div className="w-12 h-12 mx-auto rounded-2xl bg-brand-gradient-soft border border-zinc-200 flex items-center justify-center mb-4">
+            <LifeBuoy size={22} className="text-violet-700" />
+          </div>
+          <h3 className="text-2xl sm:text-3xl font-heading font-semibold">Still have a question?</h3>
+          <p className="text-secondary mt-3 max-w-md mx-auto">
+            Open a support ticket and our team will get back to you on a dedicated thread — no email back-and-forth.
+          </p>
+          <Button
+            onClick={() => setTicketOpen(true)}
+            data-testid="home-create-ticket-btn"
+            className="btn-gradient rounded-full px-7 h-12 mt-6"
+          >
+            Create a ticket <ArrowRight size={16} className="ml-1" />
+          </Button>
+        </div>
+      </section>
+
+      <CreateTicketDialog open={ticketOpen} onOpenChange={setTicketOpen} />
     </MarketingLayout>
   );
 }

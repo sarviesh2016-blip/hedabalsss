@@ -74,6 +74,18 @@ async def public_site_config():
     }
 
 
+# ---------- Public: ticket status lookup by ID (for anonymous submitters) ----------
+
+@router.get("/tickets/public/{ticket_id}")
+async def public_get_ticket(ticket_id: str):
+    """Anyone with the ticket_id can view its thread. ticket_id is unguessable
+    (uuid4 hex), so this is acceptable for support flows."""
+    t = await tickets_col.find_one({"ticket_id": ticket_id}, PROJ)
+    if not t:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+    return t
+
+
 # ---------- Public: contact form ----------
 
 @router.post("/contact")

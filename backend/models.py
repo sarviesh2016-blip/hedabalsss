@@ -227,3 +227,29 @@ class TicketReplyRequest(BaseModel):
 class TicketStatusUpdate(BaseModel):
     status: Literal["open", "answered", "closed"]
     priority: Optional[Literal["low", "normal", "high", "urgent"]] = None
+
+
+# --- Blog ---
+class BlogCreate(BaseModel):
+    title: str
+    slug: Optional[str] = None
+    excerpt: Optional[str] = ""
+    body: str
+    tag: Optional[str] = "Post"
+    thumbnail_url: Optional[str] = ""
+    published: bool = True
+
+
+class BlogUpdate(BaseModel):
+    title: Optional[str] = None
+    slug: Optional[str] = None
+    excerpt: Optional[str] = None
+    body: Optional[str] = None
+    tag: Optional[str] = None
+    thumbnail_url: Optional[str] = None
+    published: Optional[bool] = None
+
+
+class AdminTicketReplyRequest(BaseModel):
+    body: str
+    set_status: Optional[Literal["open", "answered", "closed"]] = "answered"

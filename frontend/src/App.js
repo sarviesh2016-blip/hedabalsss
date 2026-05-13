@@ -19,7 +19,12 @@ import SavedPrompts from "@/pages/SavedPrompts";
 import Billing from "@/pages/Billing";
 import ApiDocs from "@/pages/ApiDocs";
 import Blog from "@/pages/Blog";
+import BlogPost from "@/pages/BlogPost";
 import Contact from "@/pages/Contact";
+import Privacy from "@/pages/Privacy";
+import Terms from "@/pages/Terms";
+import Refund from "@/pages/Refund";
+import TicketStatus from "@/pages/TicketStatus";
 import Admin from "@/pages/Admin";
 
 function AppRouter() {
@@ -37,8 +42,13 @@ function AppRouter() {
       <Route path="/master-login" element={<MasterLogin />} />
       <Route path="/admin-login" element={<MasterLogin />} />
       <Route path="/blog" element={<Blog />} />
+      <Route path="/blog/:slug" element={<BlogPost />} />
       <Route path="/contact" element={<Contact />} />
       <Route path="/api-docs" element={<ApiDocs />} />
+      <Route path="/privacy" element={<Privacy />} />
+      <Route path="/terms" element={<Terms />} />
+      <Route path="/refund" element={<Refund />} />
+      <Route path="/tickets/:id" element={<TicketStatus />} />
 
       <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
       <Route path="/upload" element={<ProtectedRoute><UploadPage /></ProtectedRoute>} />

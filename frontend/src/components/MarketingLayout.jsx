@@ -67,8 +67,8 @@ export default function MarketingLayout({ children }) {
       <main className="pt-16">{children}</main>
 
       <footer className="border-t border-zinc-200 mt-24">
-        <div className="max-w-7xl mx-auto px-5 lg:px-8 py-14 grid md:grid-cols-4 gap-10">
-          <div>
+        <div className="max-w-7xl mx-auto px-5 lg:px-8 py-14 grid md:grid-cols-5 gap-10">
+          <div className="md:col-span-2">
             <Logo className="h-8" />
             <p className="text-secondary text-sm mt-4 max-w-xs">
               Turn any video into powerful AI prompts for the next generation of creators.
@@ -90,10 +90,11 @@ export default function MarketingLayout({ children }) {
             </ul>
           </div>
           <div>
-            <p className="text-zinc-900 text-sm font-medium mb-4">AI Models</p>
+            <p className="text-zinc-900 text-sm font-medium mb-4">Legal</p>
             <ul className="space-y-2 text-sm text-secondary">
-              <li>Veo · Sora · Kling</li>
-              <li>Runway · Midjourney · Flux</li>
+              <li><Link to="/privacy" data-testid="footer-privacy" className="hover:text-zinc-900">Privacy Policy</Link></li>
+              <li><Link to="/terms" data-testid="footer-terms" className="hover:text-zinc-900">Terms &amp; Conditions</Link></li>
+              <li><Link to="/refund" data-testid="footer-refund" className="hover:text-zinc-900">Refund Policy</Link></li>
             </ul>
           </div>
         </div>

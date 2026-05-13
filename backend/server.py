@@ -22,6 +22,8 @@ from routers.payments import router as payments_router  # noqa: E402
 from routers.admin import router as admin_router  # noqa: E402
 from routers.api_keys import router as keys_router  # noqa: E402
 from routers.public import router as public_router  # noqa: E402
+from routers.blogs import public_router as blogs_public_router, admin_router as blogs_admin_router  # noqa: E402
+from routers.admin_tickets import router as admin_tickets_router  # noqa: E402
 
 logging.basicConfig(
     level=logging.INFO,
@@ -70,6 +72,9 @@ api_router.include_router(payments_router)
 api_router.include_router(admin_router)
 api_router.include_router(keys_router)
 api_router.include_router(public_router)
+api_router.include_router(blogs_public_router)
+api_router.include_router(blogs_admin_router)
+api_router.include_router(admin_tickets_router)
 
 app.include_router(api_router)
 
