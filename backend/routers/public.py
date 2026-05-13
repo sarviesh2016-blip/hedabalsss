@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException
 
-from db import tickets_col, contact_col, PROJ
+from db import tickets_col, contact_col, get_setting, PROJ
 from auth_utils import get_current_user
 from models import TicketCreateRequest, TicketReplyRequest, ContactMessageRequest
 
@@ -42,6 +42,35 @@ def _new_ticket_doc(*, user_id: str | None, name: str, email: str, subject: str,
         }],
         "created_at": now,
         "updated_at": now,
+    }
+
+
+# ---------- Public: site config (analytics, SEO, Google OAuth client id) ----------
+
+@router.get("/site-config")
+async def public_site_config():
+    """Public subset of site_config + integration_keys. Used by the frontend
+    SiteConfigProvider to inject GA4/GTM/Pixel scripts and webmaster meta tags,
+    and by the login page to render the Google sign-in button when configured.
+    Secrets (key secrets, gemini/groq keys) are NEVER exposed here."""
+    site = await get_setting("site_config", {}) or {}
+    keys = await get_setting("integration_keys", {}) or {}
+    return {
+        # Analytics
+        "ga_measurement_id": site.get("ga_measurement_id", ""),
+        "gtm_id": site.get("gtm_id", ""),
+        "fb_pixel_id": site.get("fb_pixel_id", ""),
+        # Webmaster verifications
+        "google_site_verification": site.get("google_site_verification", ""),
+        "bing_site_verification": site.get("bing_site_verification", ""),
+        # Default SEO
+        "seo_default_title": site.get("seo_default_title", ""),
+        "seo_default_description": site.get("seo_default_description", ""),
+        "og_image_url": site.get("og_image_url", ""),
+        # Public OAuth client id only (NEVER the secret)
+        "google_client_id": keys.get("google_client_id", ""),
+        # Razorpay PUBLIC key id only (used by checkout.js on the client). Secret stays server-side.
+        "razorpay_key_id": keys.get("razorpay_key_id", ""),
     }
 
 
