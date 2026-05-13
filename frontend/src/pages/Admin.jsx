@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Users, IndianRupee, Film, AlertTriangle, KeyRound, Plus, Minus, Globe, BarChart3, Search, Mail, CheckCircle2, XCircle, MessageSquare, FileText, Send, Trash2, Image as ImageIcon, Pencil } from "lucide-react";
+import { Users, IndianRupee, Film, AlertTriangle, KeyRound, Plus, Minus, Globe, BarChart3, Search, Mail, CheckCircle2, XCircle, MessageSquare, FileText, Send, Trash2, Image as ImageIcon, Pencil, Scale } from "lucide-react";
 import { toast } from "sonner";
 
 export default function Admin() {
@@ -22,6 +22,9 @@ export default function Admin() {
   const [blogEdit, setBlogEdit] = useState(null); // null or { ...post } (new = {})
   const [uploadingThumb, setUploadingThumb] = useState(false);
   const [publicCfg, setPublicCfg] = useState({});
+  const [legalKind, setLegalKind] = useState("privacy");
+  const [legal, setLegal] = useState({}); // { privacy: {...}, terms: {...}, refund: {...} }
+  const [legalDraft, setLegalDraft] = useState({ title: "", body: "" });
   const [keys, setKeys] = useState({});
   const [siteCfg, setSiteCfg] = useState({});
   const [keysForm, setKeysForm] = useState({
@@ -38,7 +41,7 @@ export default function Admin() {
   const [delta, setDelta] = useState(0);
 
   const loadAll = async () => {
-    const [s, u, p, g, k, sc, m, t, b, pc] = await Promise.all([
+    const [s, u, p, g, k, sc, m, t, b, pc, lp, lt, lr] = await Promise.all([
       api.get("/admin/stats"),
       api.get("/admin/users"),
       api.get("/admin/payments"),
@@ -49,10 +52,15 @@ export default function Admin() {
       api.get("/admin/tickets"),
       api.get("/admin/blogs"),
       api.get("/site-config"),
+      api.get("/admin/legal/privacy"),
+      api.get("/admin/legal/terms"),
+      api.get("/admin/legal/refund"),
     ]);
     setStats(s.data); setUsers(u.data); setPayments(p.data); setGens(g.data);
     setKeys(k.data); setSiteCfg(sc.data || {}); setMessages(m.data || []);
     setTickets(t.data || []); setBlogs(b.data || []); setPublicCfg(pc.data || {});
+    setLegal({ privacy: lp.data, terms: lt.data, refund: lr.data });
+    setLegalDraft({ title: lp.data.title || "", body: lp.data.body || "" });
   };
 
   const reloadCfgs = async () => {
@@ -139,6 +147,29 @@ export default function Admin() {
     finally { setUploadingThumb(false); }
   };
 
+  const switchLegal = (kind) => {
+    setLegalKind(kind);
+    const doc = legal[kind] || {};
+    setLegalDraft({ title: doc.title || "", body: doc.body || "" });
+  };
+
+  const saveLegal = async () => {
+    try {
+      await api.put(`/admin/legal/${legalKind}`, { title: legalDraft.title, body: legalDraft.body });
+      const { data } = await api.get(`/admin/legal/${legalKind}`);
+      setLegal((l) => ({ ...l, [legalKind]: data }));
+      toast.success(`${data.title || legalKind} saved`);
+    } catch (e) { toast.error(e?.response?.data?.detail || "Save failed"); }
+  };
+
+  const clearSiteField = async (key) => {
+    try {
+      await api.put("/admin/site-config", { [key]: "" });
+      await reloadCfgs();
+      toast.success("Cleared");
+    } catch { toast.error("Clear failed"); }
+  };
+
   useEffect(() => { loadAll().catch(() => toast.error("Admin load failed")); }, []);
 
   const saveKeys = async () => {
@@ -209,6 +240,7 @@ export default function Admin() {
           <TabsTrigger value="messages" data-testid="tab-messages" className="data-[state=active]:bg-white data-[state=active]:text-zinc-900 data-[state=active]:shadow-sm text-secondary">Messages</TabsTrigger>
           <TabsTrigger value="tickets" data-testid="tab-tickets" className="data-[state=active]:bg-white data-[state=active]:text-zinc-900 data-[state=active]:shadow-sm text-secondary">Tickets</TabsTrigger>
           <TabsTrigger value="blogs" data-testid="tab-blogs" className="data-[state=active]:bg-white data-[state=active]:text-zinc-900 data-[state=active]:shadow-sm text-secondary">Blogs</TabsTrigger>
+          <TabsTrigger value="legal" data-testid="tab-legal" className="data-[state=active]:bg-white data-[state=active]:text-zinc-900 data-[state=active]:shadow-sm text-secondary">Legal</TabsTrigger>
         </TabsList>
 
         <TabsContent value="users" className="mt-5">
@@ -472,6 +504,72 @@ export default function Admin() {
               ))}
             </div>
           )}
+        </TabsContent>
+
+        <TabsContent value="legal" className="mt-5">
+          <Card icon={Scale} title="Legal pages" desc="Edit Privacy Policy, Terms & Conditions and Refund Policy. Saved content shows on the public site immediately. Use blank lines for paragraphs and ## for headings.">
+            <div className="flex flex-wrap gap-2 mb-5">
+              {["privacy", "terms", "refund"].map(k => {
+                const active = legalKind === k;
+                const isDefault = legal?.[k]?.is_default;
+                return (
+                  <button
+                    key={k}
+                    onClick={() => switchLegal(k)}
+                    data-testid={`legal-tab-${k}`}
+                    className={`text-xs uppercase tracking-widest px-3 py-1.5 rounded-full border flex items-center gap-1.5 ${
+                      active
+                        ? "bg-violet-50 text-violet-700 border-violet-200"
+                        : "bg-zinc-50 text-secondary border-zinc-200 hover:bg-zinc-100"
+                    }`}
+                  >
+                    {k === "privacy" ? "Privacy Policy" : k === "terms" ? "Terms & Conditions" : "Refund Policy"}
+                    {!isDefault
+                      ? <CheckCircle2 size={11} className="text-emerald-600" />
+                      : <XCircle size={11} className="text-zinc-400" />}
+                  </button>
+                );
+              })}
+            </div>
+
+            {legal?.[legalKind]?.is_default && (
+              <div className="rounded-xl border border-amber-200 bg-amber-50 text-amber-900 text-xs p-3 mb-4" data-testid="legal-default-banner">
+                You're viewing the <strong>default placeholder</strong>. Save below to publish your own version.
+              </div>
+            )}
+
+            <div>
+              <label className="text-xs uppercase tracking-widest text-muted block mb-2">Page title</label>
+              <Input
+                value={legalDraft.title}
+                onChange={(e) => setLegalDraft({ ...legalDraft, title: e.target.value })}
+                data-testid="legal-title-input"
+                className="bg-white border-zinc-200"
+              />
+            </div>
+            <div className="mt-3">
+              <label className="text-xs uppercase tracking-widest text-muted block mb-2">Body</label>
+              <Textarea
+                value={legalDraft.body}
+                onChange={(e) => setLegalDraft({ ...legalDraft, body: e.target.value })}
+                data-testid="legal-body-input"
+                rows={18}
+                className="bg-white border-zinc-200 font-mono text-sm"
+              />
+            </div>
+            <div className="flex gap-2 mt-4">
+              <Button onClick={saveLegal} data-testid="legal-save-btn" className="btn-gradient rounded-full">Save {legalKind} page</Button>
+              <a
+                href={`/${legalKind === "refund" ? "refund" : legalKind}`}
+                target="_blank"
+                rel="noreferrer"
+                className="text-xs text-violet-700 underline self-center"
+                data-testid="legal-preview-link"
+              >
+                Preview live page →
+              </a>
+            </div>
+          </Card>
         </TabsContent>
       </Tabs>
 

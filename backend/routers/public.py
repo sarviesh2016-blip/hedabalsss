@@ -5,8 +5,8 @@ from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException
 
-from db import tickets_col, contact_col, get_setting, PROJ
-from auth_utils import get_current_user
+from db import tickets_col, contact_col, get_setting, set_setting, PROJ
+from auth_utils import get_current_user, get_current_user_optional
 from models import TicketCreateRequest, TicketReplyRequest, ContactMessageRequest
 
 logger = logging.getLogger(__name__)
@@ -86,14 +86,35 @@ async def public_get_ticket(ticket_id: str):
     return t
 
 
+# ---------- Public: editable legal pages ----------
+
+LEGAL_KINDS = {"privacy", "terms", "refund"}
+_LEGAL_DEFAULTS = {
+    "privacy": {"title": "Privacy Policy", "body": "_This privacy policy is being prepared. Please check back soon._"},
+    "terms":   {"title": "Terms & Conditions", "body": "_These terms are being prepared. Please check back soon._"},
+    "refund":  {"title": "Refund Policy", "body": "_Our refund policy is being prepared. Please check back soon._"},
+}
+
+
+@router.get("/legal/{kind}")
+async def get_legal(kind: str):
+    if kind not in LEGAL_KINDS:
+        raise HTTPException(status_code=404, detail="Unknown legal page")
+    doc = await get_setting(f"legal_{kind}", None)
+    if not doc:
+        return _LEGAL_DEFAULTS[kind] | {"kind": kind, "is_default": True}
+    return {**_LEGAL_DEFAULTS[kind], **doc, "kind": kind, "is_default": False}
+
+
 # ---------- Public: contact form ----------
 
 @router.post("/contact")
-async def submit_contact(req: ContactMessageRequest):
-    """Public contact form. Always creates a ticket. Also writes a legacy
-    contact_messages doc so any old admin tooling still sees it."""
+async def submit_contact(req: ContactMessageRequest, user=Depends(get_current_user_optional)):
+    """Public contact form. Always creates a ticket. If the requester is logged
+    in, the ticket is linked to their account so it shows up in their dashboard
+    inbox. Also writes a legacy contact_messages doc."""
     doc = _new_ticket_doc(
-        user_id=None,
+        user_id=user["user_id"] if user else None,
         name=req.name,
         email=req.email,
         subject=req.subject,
@@ -104,6 +125,7 @@ async def submit_contact(req: ContactMessageRequest):
     await contact_col.insert_one({
         "contact_id": f"ct_{uuid.uuid4().hex[:14]}",
         "ticket_id": doc["ticket_id"],
+        "user_id": user["user_id"] if user else None,
         "name": req.name, "email": req.email,
         "subject": req.subject, "message": req.message,
         "created_at": doc["created_at"],

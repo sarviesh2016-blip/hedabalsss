@@ -5,7 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import {
   LayoutDashboard, Upload, Bookmark, CreditCard, Code2,
-  Shield, LogOut, Sparkles, Menu, Home as HomeIcon
+  Shield, LogOut, Sparkles, Menu, Home as HomeIcon, LifeBuoy
 } from "lucide-react";
 
 const navItems = [
@@ -14,6 +14,7 @@ const navItems = [
   { to: "/upload", label: "New Generation", icon: Upload, testid: "side-upload" },
   { to: "/saved-prompts", label: "Saved Prompts", icon: Bookmark, testid: "side-saved" },
   { to: "/billing", label: "Billing", icon: CreditCard, testid: "side-billing" },
+  { to: "/support", label: "Support", icon: LifeBuoy, testid: "side-support" },
   { to: "/api-docs", label: "API Keys", icon: Code2, testid: "side-api" },
 ];
 

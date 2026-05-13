@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import Logo from "@/components/Logo";
 import { Button } from "@/components/ui/button";
-import { Menu, X, LayoutDashboard } from "lucide-react";
+import { Menu, X, LayoutDashboard, Zap } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 
 const navItems = [
@@ -47,7 +47,7 @@ export default function MarketingLayout({ children }) {
               <button
                 onClick={goDash}
                 data-testid="header-user-chip"
-                className="flex items-center gap-2.5 rounded-full pl-1 pr-4 py-1 border border-zinc-200 bg-white hover:bg-zinc-50 transition-colors group"
+                className="flex items-center gap-2.5 rounded-full pl-1 pr-3 py-1 border border-zinc-200 bg-white hover:bg-zinc-50 transition-colors group"
                 title="Go to dashboard"
               >
                 {user.picture ? (
@@ -57,8 +57,16 @@ export default function MarketingLayout({ children }) {
                     {initial}
                   </span>
                 )}
-                <span className="text-sm text-zinc-900 max-w-[140px] truncate" data-testid="header-user-name">
+                <span className="text-sm text-zinc-900 max-w-[120px] truncate" data-testid="header-user-name">
                   {user.name || user.email}
+                </span>
+                <span
+                  data-testid="header-credits-badge"
+                  className="flex items-center gap-1 rounded-full bg-violet-50 border border-violet-200 px-2 py-0.5 text-[11px] font-mono font-medium text-violet-700"
+                  title={`${user.credits ?? 0} credits available`}
+                >
+                  <Zap size={11} className="fill-violet-400 text-violet-500" />
+                  {user.credits ?? 0}
                 </span>
                 <LayoutDashboard size={14} className="text-secondary group-hover:text-violet-700 transition-colors" />
               </button>

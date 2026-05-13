@@ -253,3 +253,8 @@ class BlogUpdate(BaseModel):
 class AdminTicketReplyRequest(BaseModel):
     body: str
     set_status: Optional[Literal["open", "answered", "closed"]] = "answered"
+
+
+class LegalPageUpdate(BaseModel):
+    title: Optional[str] = None
+    body: Optional[str] = None

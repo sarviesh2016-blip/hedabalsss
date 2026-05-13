@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -7,16 +7,30 @@ import { Button } from "@/components/ui/button";
 import { CheckCircle2, Copy, MessageSquare } from "lucide-react";
 import { api } from "@/lib/api";
 import { toast } from "sonner";
+import { useAuth } from "@/contexts/AuthContext";
 
 /**
  * Lightweight ticket creation modal — used from the landing page and anywhere
  * a "Need help?" CTA is shown. Posts to /api/contact which creates a ticket
- * server-side, then shows the user their ticket id + a link to track it.
+ * server-side (auto-linked to the user_id if logged in), then shows the user
+ * their ticket id + a link to track it.
  */
 export default function CreateTicketDialog({ open, onOpenChange, defaultSubject = "" }) {
+  const { user } = useAuth();
   const [form, setForm] = useState({ name: "", email: "", subject: defaultSubject, message: "" });
   const [sending, setSending] = useState(false);
   const [created, setCreated] = useState(null); // { ticket_id }
+
+  // Prefill from auth context when the dialog opens
+  useEffect(() => {
+    if (open && user) {
+      setForm((f) => ({
+        ...f,
+        name: f.name || user.name || "",
+        email: f.email || user.email || "",
+      }));
+    }
+  }, [open, user]);
 
   const submit = async (e) => {
     e.preventDefault();
@@ -80,12 +94,12 @@ export default function CreateTicketDialog({ open, onOpenChange, defaultSubject 
               </Button>
             </div>
             <Link
-              to={`/tickets/${created.ticket_id}`}
+              to={user ? `/support` : `/tickets/${created.ticket_id}`}
               className="btn-gradient rounded-full h-10 inline-flex items-center justify-center w-full text-sm"
               data-testid="view-ticket-btn"
               onClick={close}
             >
-              View ticket
+              {user ? "View in my tickets" : "View ticket"}
             </Link>
           </div>
         ) : (

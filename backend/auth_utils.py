@@ -78,6 +78,18 @@ async def get_current_user(
     return user
 
 
+async def get_current_user_optional(
+    request: Request,
+    authorization: Optional[str] = Header(None),
+    session_token: Optional[str] = Cookie(None),
+):
+    """Same as get_current_user but returns None instead of raising when not authed."""
+    try:
+        return await get_current_user(request, authorization, session_token)
+    except HTTPException:
+        return None
+
+
 async def refresh_free_credits_if_due(user: dict) -> dict:
     """Top free-plan users back up to FREE_DAILY_CREDITS once every 24h."""
     try:

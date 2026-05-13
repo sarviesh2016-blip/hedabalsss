@@ -25,6 +25,7 @@ import Privacy from "@/pages/Privacy";
 import Terms from "@/pages/Terms";
 import Refund from "@/pages/Refund";
 import TicketStatus from "@/pages/TicketStatus";
+import Support from "@/pages/Support";
 import Admin from "@/pages/Admin";
 
 function AppRouter() {
@@ -55,6 +56,7 @@ function AppRouter() {
       <Route path="/generations/:id" element={<ProtectedRoute><PromptResult /></ProtectedRoute>} />
       <Route path="/saved-prompts" element={<ProtectedRoute><SavedPrompts /></ProtectedRoute>} />
       <Route path="/billing" element={<ProtectedRoute><Billing /></ProtectedRoute>} />
+      <Route path="/support" element={<ProtectedRoute><Support /></ProtectedRoute>} />
       <Route path="/admin" element={<ProtectedRoute adminOnly><Admin /></ProtectedRoute>} />
     </Routes>
   );

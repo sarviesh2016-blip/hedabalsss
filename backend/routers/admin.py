@@ -11,7 +11,7 @@ from db import (
     get_setting, set_setting, PROJ,
 )
 from auth_utils import require_admin
-from models import AdminCreditAdjustRequest, IntegrationKeysUpdate, SiteConfigUpdate
+from models import AdminCreditAdjustRequest, IntegrationKeysUpdate, SiteConfigUpdate, LegalPageUpdate
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 logger = logging.getLogger(__name__)
@@ -121,21 +121,62 @@ async def get_site_config_route(admin=Depends(require_admin)):
 @router.put("/site-config")
 async def update_site_config(req: SiteConfigUpdate, admin=Depends(require_admin)):
     current = await get_setting("site_config", {}) or {}
-    payload = req.model_dump(exclude_none=True)
-    payload = {k: v for k, v in payload.items() if v != ""}
-    current.update(payload)
+    payload = req.model_dump(exclude_unset=True)
+    # Empty string explicitly clears the value. Anything not in payload stays untouched.
+    cleared = []
+    for k, v in payload.items():
+        if v == "":
+            current.pop(k, None)
+            cleared.append(k)
+        else:
+            current[k] = v
     await set_setting("site_config", current)
     await admin_logs_col.insert_one({
         "log_id": f"log_{uuid.uuid4().hex[:12]}",
         "admin_id": admin["user_id"],
         "action": "update_site_config",
         "target_user_id": None,
-        "metadata": {"keys_updated": list(payload.keys())},
+        "metadata": {"keys_updated": list(payload.keys()), "keys_cleared": cleared},
         "created_at": datetime.now(timezone.utc).isoformat(),
     })
-    return {"ok": True, "updated": list(payload.keys())}
+    return {"ok": True, "updated": list(payload.keys()), "cleared": cleared}
 
 
 @router.get("/logs")
 async def list_logs(admin=Depends(require_admin), limit: int = 200):
     return await admin_logs_col.find({}, PROJ).sort("created_at", -1).to_list(limit)
+
+
+# ---------- Legal pages (admin-editable) ----------
+
+@router.get("/legal/{kind}")
+async def admin_get_legal(kind: str, admin=Depends(require_admin)):
+    from routers.public import LEGAL_KINDS, _LEGAL_DEFAULTS
+    if kind not in LEGAL_KINDS:
+        raise HTTPException(status_code=404, detail="Unknown legal page")
+    doc = await get_setting(f"legal_{kind}", None)
+    if not doc:
+        return {**_LEGAL_DEFAULTS[kind], "kind": kind, "is_default": True}
+    return {**_LEGAL_DEFAULTS[kind], **doc, "kind": kind, "is_default": False}
+
+
+@router.put("/legal/{kind}")
+async def admin_put_legal(kind: str, req: LegalPageUpdate, admin=Depends(require_admin)):
+    from routers.public import LEGAL_KINDS
+    if kind not in LEGAL_KINDS:
+        raise HTTPException(status_code=404, detail="Unknown legal page")
+    payload = req.model_dump(exclude_none=True)
+    payload["updated_at"] = datetime.now(timezone.utc).isoformat()
+    payload["updated_by"] = admin["user_id"]
+    current = await get_setting(f"legal_{kind}", {}) or {}
+    current.update(payload)
+    await set_setting(f"legal_{kind}", current)
+    await admin_logs_col.insert_one({
+        "log_id": f"log_{uuid.uuid4().hex[:12]}",
+        "admin_id": admin["user_id"],
+        "action": f"update_legal_{kind}",
+        "target_user_id": None,
+        "metadata": {"fields": list(payload.keys())},
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    })
+    return {"ok": True, "kind": kind, "updated": list(payload.keys())}
